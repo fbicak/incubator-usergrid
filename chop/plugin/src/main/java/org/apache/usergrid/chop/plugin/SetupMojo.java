@@ -33,7 +33,6 @@ import org.apache.maven.project.MavenProjectHelper;
 
 import org.apache.usergrid.chop.api.Project;
 import org.apache.usergrid.chop.api.RestParams;
-import org.apache.usergrid.chop.stack.SetupStackState;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
