@@ -92,7 +92,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
         if ( chopUiFig.getServiceProvider().equalsIgnoreCase( AmazonProvider.PROVIDER_NAME ) ) {
             AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
-            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, stack.getDataCenter() );
+            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
             amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
 
             IpRuleManager ipRuleManager = InjectorFactory.getInstance( IpRuleManager.class );
