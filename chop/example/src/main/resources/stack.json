@@ -2,9 +2,9 @@
   "name" : "ExampleStack",
   "id" : "adb51dfa-ed4f-4a36-9cbf-6b5a7b6da31e",
   "clusters" : [ {
-    "name" : "TestCluster",
+    "name" : "TestCassandraCluster",
     "instanceSpec" : {
-      "imageId" : "ami-56a0463e",
+      "imageId" : "cassandra",
       "type" : "m1.large",
       "keyName" : "TestKeyPair",
       "setupScripts" : [ "file://./test_script.sh" ],
@@ -15,7 +15,7 @@
     },
     "size" : 2
   } ],
-  "dataCenter" : "us-east-1a",
+  "dataCenter" : "172.16.11.188:8181",
   "ipRuleSet" : {
     "name" : "ChopTestSecurityGroup",
     "id" : "40a543f3-9cfc-44bc-b896-77574cae1772",
