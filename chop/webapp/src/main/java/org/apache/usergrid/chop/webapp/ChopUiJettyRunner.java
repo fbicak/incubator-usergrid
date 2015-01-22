@@ -104,6 +104,7 @@ public class ChopUiJettyRunner extends JettyRunner {
         options.addOption("c", "client-only", true, "Client to existing ES cluster: transport address argument " +
                 "(i.e. localhost:3456)");
         options.addOption( "n", "name-of-cluster", true, "Sets the name of the ES instance/cluster." );
+        options.addOption( "p", "service-provider", true, "Overrides the service provider(AWS by default)" );
 
         return options;
     }

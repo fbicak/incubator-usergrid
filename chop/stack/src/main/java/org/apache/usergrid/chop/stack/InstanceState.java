@@ -19,6 +19,9 @@
 package org.apache.usergrid.chop.stack;
 
 
+import org.safehaus.subutai.common.host.ContainerHostState;
+
+
 /**
  * The states of an instance.
  */
@@ -67,6 +70,23 @@ public enum InstanceState {
             return InstanceState.Stopped;
         } else {
             throw new IllegalArgumentException( "Cannot create enum from " + value + " value!" );
+        }
+    }
+
+
+    public static InstanceState fromContainerHostState( ContainerHostState state ) {
+        if ( state == null || "".equals( state ) ) {
+            throw new IllegalArgumentException( "Value cannot be null or empty!" );
+        } else if ( ContainerHostState.STARTING.equals( state ) ) {
+            return InstanceState.Pending;
+        } else if ( ContainerHostState.RUNNING.equals( state ) ) {
+            return InstanceState.Running;
+        } else if ( ContainerHostState.STOPPING.equals( state ) ) {
+            return InstanceState.Stopping;
+        } else if ( ContainerHostState.STOPPED.equals( state ) ) {
+            return InstanceState.Stopped;
+        } else {
+            throw new IllegalArgumentException( "Cannot create enum from " + state + " state!" );
         }
     }
 

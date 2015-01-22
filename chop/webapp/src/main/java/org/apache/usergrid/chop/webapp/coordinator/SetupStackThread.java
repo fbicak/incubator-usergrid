@@ -30,6 +30,8 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import org.apache.usergrid.chop.api.ProviderParams;
 import org.apache.usergrid.chop.api.store.amazon.AmazonFig;
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.spi.InstanceManager;
 import org.apache.usergrid.chop.spi.IpRuleManager;
 import org.apache.usergrid.chop.spi.LaunchResult;
@@ -87,17 +89,21 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         ProviderParams providerParams = providerParamsDao.getByUser( stack.getUser().getUsername() );
 
         /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
-        AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
-        amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
-        amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( AmazonProvider.PROVIDER_NAME ) ) {
+            AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
+            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
+            amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
+
+            IpRuleManager ipRuleManager = InjectorFactory.getInstance( IpRuleManager.class );
+            ipRuleManager.setDataCenter( stack.getDataCenter() );
+            ipRuleManager.applyIpRuleSet( stack.getIpRuleSet() );
+        }
 
         InstanceManager instanceManager = InjectorFactory.getInstance( InstanceManager.class );
-        IpRuleManager ipRuleManager = InjectorFactory.getInstance( IpRuleManager.class );
 
         File runnerJar = CoordinatorUtils.getRunnerJar( chopUiFig.getContextPath(), stack );
 
-        ipRuleManager.setDataCenter( stack.getDataCenter() );
-        ipRuleManager.applyIpRuleSet( stack.getIpRuleSet() );
+
 
         /** Setup clusters */
         for ( ICoordinatedCluster cluster : stack.getClusters() ) {

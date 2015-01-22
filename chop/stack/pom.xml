@@ -15,11 +15,18 @@
   </description>
 
   <dependencies>
+
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>chop-api</artifactId>
       <version>${project.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.safehaus.subutai</groupId>
+      <artifactId>subutai-common</artifactId>
+    </dependency>
+
   </dependencies>
 </project>
 

@@ -24,6 +24,8 @@ import org.safehaus.guicyfig.FigSingleton;
 import org.safehaus.guicyfig.GuicyFig;
 import org.safehaus.guicyfig.Key;
 
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+
 
 /**
  * Servlet configuration information.
@@ -99,4 +101,16 @@ public interface ChopUiFig extends GuicyFig {
     @Default(ChopUiFig.DEFAULT_LAUNCH_CLUSTER_TIMEOUT)
     @Key(ChopUiFig.LAUNCH_CLUSTER_TIMEOUT_KEY)
     int getLaunchClusterTimeout();
+
+
+    String SERVICE_PROVIDER_KEY = "service.provider";
+    String DEFAULT_SERVICE_PROVIDER = AmazonProvider.PROVIDER_NAME;
+
+    /**
+     *
+     * @return The service provider used in the webapp
+     */
+    @Default(ChopUiFig.DEFAULT_SERVICE_PROVIDER)
+    @Key(ChopUiFig.SERVICE_PROVIDER_KEY)
+    String getServiceProvider();
 }
