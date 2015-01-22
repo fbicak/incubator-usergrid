@@ -31,6 +31,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.usergrid.chop.api.ProviderParams;
 import org.apache.usergrid.chop.api.store.amazon.AmazonFig;
 import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiFig;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.spi.InstanceManager;
 import org.apache.usergrid.chop.spi.IpRuleManager;
@@ -91,12 +92,16 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
         if ( chopUiFig.getServiceProvider().equalsIgnoreCase( AmazonProvider.PROVIDER_NAME ) ) {
             AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
-            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
+            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, stack.getDataCenter() );
             amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
 
             IpRuleManager ipRuleManager = InjectorFactory.getInstance( IpRuleManager.class );
             ipRuleManager.setDataCenter( stack.getDataCenter() );
             ipRuleManager.applyIpRuleSet( stack.getIpRuleSet() );
+        }
+        else if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            SubutaiFig subutaiFig = InjectorFactory.getInstance( SubutaiFig.class );
+            subutaiFig.bypass( SubutaiFig.SUBUTAI_PEER_SITE, stack.getDataCenter() );
         }
 
         InstanceManager instanceManager = InjectorFactory.getInstance( InstanceManager.class );

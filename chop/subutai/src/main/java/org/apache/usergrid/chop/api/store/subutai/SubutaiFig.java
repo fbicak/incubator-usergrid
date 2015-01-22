@@ -19,27 +19,20 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
-import java.util.ArrayList;
-import java.util.List;
-
+import org.safehaus.guicyfig.FigSingleton;
 import org.safehaus.guicyfig.GuicyFig;
-import org.safehaus.guicyfig.GuicyFigModule;
-
-import org.apache.usergrid.chop.api.Constants;
-import org.apache.usergrid.chop.api.Runner;
-import org.apache.usergrid.chop.spi.InstanceManager;
-
-import com.google.inject.AbstractModule;
+import org.safehaus.guicyfig.Key;
 
 
-public class SubutaiModule extends AbstractModule implements Constants {
+/**
+ * Amazon configuration settings.
+ */
+@FigSingleton
+public interface SubutaiFig extends GuicyFig {
 
+    String SUBUTAI_PEER_SITE = "subutai.peer.site";
 
-    protected void configure() {
-        List<Class<? extends GuicyFig>> figs = new ArrayList<Class<? extends GuicyFig>>( 2 );
-        figs.add( SubutaiFig.class );
-        figs.add( Runner.class );
-        install( new GuicyFigModule( figs ) );
-        bind( InstanceManager.class ).to( SubutaiInstanceManager.class );
-    }
+    @Key( SubutaiFig.SUBUTAI_PEER_SITE )
+    String getSubutaiPeerSite();
+
 }

@@ -42,6 +42,8 @@ import org.apache.usergrid.chop.stack.Instance;
 import org.apache.usergrid.chop.stack.InstanceSpec;
 import org.apache.usergrid.chop.stack.InstanceState;
 
+import com.google.inject.Inject;
+
 
 public class SubutaiInstanceManager implements InstanceManager
 {
@@ -49,6 +51,18 @@ public class SubutaiInstanceManager implements InstanceManager
     private static Logger LOG = LoggerFactory.getLogger( SubutaiInstanceManager.class );
 
     private static final long SLEEP_LENGTH = 3000;
+
+    private SubutaiClient subutaiClient;
+
+
+    /**
+     * @param subutaiFig Fig object containing Subutai peer information
+     */
+    @Inject
+    public SubutaiInstanceManager( SubutaiFig subutaiFig ) {
+        subutaiClient = new SubutaiClient( subutaiFig.getSubutaiPeerSite() );
+    }
+
 
     @Override
     public long getDefaultTimeout()
@@ -68,6 +82,7 @@ public class SubutaiInstanceManager implements InstanceManager
     public void terminateInstances( final Collection<String> instanceIds )
     {
 
+
     }
 
 
@@ -76,8 +91,6 @@ public class SubutaiInstanceManager implements InstanceManager
                                        final int timeout )
     {
         LOG.info( "Creating the cluster instances on {}", stack.getDataCenter() );
-
-        SubutaiClient subutaiClient = new SubutaiClient( stack.getDataCenter() );
 
         List<String> instanceIds = new ArrayList<String>( cluster.getSize() );
 
