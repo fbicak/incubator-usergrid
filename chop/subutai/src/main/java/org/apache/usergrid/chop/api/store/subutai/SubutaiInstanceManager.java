@@ -24,11 +24,11 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import org.safehaus.subutai.common.host.ContainerHostState;
-import org.safehaus.subutai.common.peer.ContainerHost;
-import org.safehaus.subutai.common.peer.PeerException;
-import org.safehaus.subutai.core.environment.api.helper.Environment;
+import org.safehaus.subutai.core.environment.rest.ContainerJson;
+import org.safehaus.subutai.core.environment.rest.EnvironmentJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,14 +74,25 @@ public class SubutaiInstanceManager implements InstanceManager
     @Override
     public void setDataCenter( final String dataCenter )
     {
-
+        subutaiClient.setHttpAddress( dataCenter );
     }
 
 
     @Override
     public void terminateInstances( final Collection<String> instanceIds )
     {
+        UUID environmentId =
+                subutaiClient.getEnvironmentIdByInstanceId( UUID.fromString( instanceIds.iterator().next() ) );
+        for ( String instanceId : instanceIds ) {
+            subutaiClient.destroyInstanceByInstanceId( UUID.fromString( instanceId ) );
+        }
 
+        // Destroy environment if no instance left inside
+        EnvironmentJson environment =
+                subutaiClient.getEnvironmentByEnvironmentId( environmentId );
+        if ( environment.getContainers().size() == 0 ) {
+            subutaiClient.destroyEnvironment( environmentId );
+        }
 
     }
 
@@ -93,32 +104,24 @@ public class SubutaiInstanceManager implements InstanceManager
         LOG.info( "Creating the cluster instances on {}", stack.getDataCenter() );
 
         List<String> instanceIds = new ArrayList<String>( cluster.getSize() );
-
         Collection<Instance> instances = new ArrayList<Instance>();
+        EnvironmentJson environment = subutaiClient.createStackEnvironment( stack );
+        Set<ContainerJson> containerHosts = environment.getContainers();
 
-        Environment environment = subutaiClient.createStackEnvironment( stack );
-
-        Set<ContainerHost> containerHosts = environment.getContainerHosts();
-
-        Iterator<ContainerHost> iterator = containerHosts.iterator();
+        Iterator<ContainerJson> iterator = containerHosts.iterator();
 
         while( iterator.hasNext() ) {
-            ContainerHost containerHost = iterator.next();
+            ContainerJson containerHost = iterator.next();
             BasicInstanceSpec instanceSpec = new BasicInstanceSpec();
             instanceSpec.setImageId( containerHost.getTemplateName() );
 
-            String privateIpAddress = containerHost.getIpByInterfaceName( "eth0" );
-            String publicIpAddress = containerHost.getIpByInterfaceName( "eth0" );
+            String privateIpAddress = containerHost.getIp();
+            String publicIpAddress = containerHost.getIp();
             String privateDnsName = containerHost.getHostname();
             String publicDnsName = containerHost.getHostname();
 
-            ContainerHostState containerState = ContainerHostState.STOPPED;
-            try {
-                containerState = containerHost.getState();
-            }
-            catch ( PeerException e ) {
-                e.printStackTrace();
-            }
+            ContainerHostState containerState;
+            containerState = containerHost.getState();
             InstanceState instanceState = InstanceState.fromContainerHostState( containerState );
             Instance instance = new BasicInstance( containerHost.getId().toString(), instanceSpec, instanceState,
                     privateDnsName, publicDnsName, privateIpAddress, publicIpAddress );
@@ -133,9 +136,10 @@ public class SubutaiInstanceManager implements InstanceManager
             if ( ! stateCheck ) {
                 LOG.warn( "Waiting for instances to get into Running state has timed out" );
             }
+            else {
+                LOG.info( "All the cluster instances are running" );
+            }
         }
-
-        LOG.info( "All the cluster instances are running" );
 
         LOG.info( "Configuring the cluster {}", cluster.getName() );
 

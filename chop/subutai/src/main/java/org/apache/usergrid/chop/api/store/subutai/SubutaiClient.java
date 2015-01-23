@@ -19,7 +19,6 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -30,8 +29,9 @@ import javax.ws.rs.core.Response;
 import org.safehaus.subutai.common.host.ContainerHostState;
 import org.safehaus.subutai.common.protocol.EnvironmentBlueprint;
 import org.safehaus.subutai.common.protocol.NodeGroup;
+import org.safehaus.subutai.common.protocol.PlacementStrategy;
 import org.safehaus.subutai.common.settings.Common;
-import org.safehaus.subutai.core.environment.api.helper.Environment;
+import org.safehaus.subutai.core.environment.rest.EnvironmentJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +47,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.api.uri.UriComponent;
 
 
 public class SubutaiClient
@@ -54,11 +55,17 @@ public class SubutaiClient
     private static final Logger LOG = LoggerFactory.getLogger( SubutaiClient.class );
 
     private String httpAddress;
+    private Client client;
 
-    private static final String ENVIRONMENT_BASE_ENDPOINT = "/environment";
+    public static final String REST_BASE_ENDPOINT = "/cxf";
+    public static final String ENVIRONMENT_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/environment";
+    public static final String CONTAINER_BASE_ENDPOINT = ENVIRONMENT_BASE_ENDPOINT + "/container";
+
 
     public SubutaiClient( String httpAddress ) {
         this.httpAddress = httpAddress;
+        DefaultClientConfig clientConfig = new DefaultClientConfig();
+        client = Client.create( clientConfig );
     }
 
 
@@ -67,8 +74,36 @@ public class SubutaiClient
      * @param stack
      * @return the environment created for the given stack
      */
-    public Environment createStackEnvironment( final ICoordinatedStack stack ) {
+    public EnvironmentJson createStackEnvironment( final ICoordinatedStack stack ) {
         // Create the blueprint from the supplied stack
+        EnvironmentBlueprint blueprint = getBlueprintFromStack( stack );
+
+
+        // Send a request to build the blueprint
+
+        WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
+
+        String blueprintEncoded = UriComponent.encode( new Gson().toJson( blueprint ), UriComponent.Type.QUERY_PARAM );
+        // Returns the uuid of the environment created from the supplied blueprint
+        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.ENVIRONMENT_BLUEPRINT, blueprintEncoded )
+                                                          .type( MediaType.APPLICATION_JSON )
+                                                          .post( ClientResponse.class );
+
+
+        if ( environmentBuildResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
+            LOG.error( "Environment build operation for {} stack is not successful! Error: {}", stack.getName(),
+                    environmentBuildResponse.getEntity( String.class ) );
+            return null;
+        }
+
+        String responseMessage = environmentBuildResponse.getEntity( String.class );
+        EnvironmentJson environment = new Gson().fromJson( responseMessage, EnvironmentJson.class );
+        return environment;
+    }
+
+
+    public EnvironmentBlueprint getBlueprintFromStack( final ICoordinatedStack stack )
+    {
         EnvironmentBlueprint blueprint = new EnvironmentBlueprint( stack.getName(),
                 Common.DEFAULT_DOMAIN_NAME, true, true );
         Set<NodeGroup> clusterNodeGroups = new HashSet<NodeGroup>( stack.getClusters().size() );
@@ -79,6 +114,7 @@ public class SubutaiClient
             clusterNodeGroup.setTemplateName( cluster.getInstanceSpec().getImageId() );
             clusterNodeGroup.setName( cluster.getName() );
             clusterNodeGroup.setNumberOfNodes( cluster.getSize() );
+            clusterNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
             clusterNodeGroup.setLinkHosts( true );
             clusterNodeGroup.setExchangeSshKeys( true );
 
@@ -86,28 +122,8 @@ public class SubutaiClient
         }
 
         blueprint.setNodeGroups( clusterNodeGroups );
-
-
-        // Send a request to build the blueprint
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
-        // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse environmentBuildResponse = resource.path( "/build" )
-                                                          .queryParam( RestParams.ENVIRONMENT_BLUEPRINT, new Gson().toJson( blueprint ) )
-                                                          .type( MediaType.APPLICATION_JSON )
-                                                          .accept( MediaType.APPLICATION_JSON )
-                                                          .post( ClientResponse.class );
-
-
-//        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( "/registry" );
-//        ClientResponse environmentBuildResponse = resource.path( "/templates/openjre7/2.1.1" )
-//                                                          .type( MediaType.APPLICATION_JSON )
-//                                                          .accept( MediaType.APPLICATION_JSON )
-//                                                          .get( ClientResponse.class );
-        String responseMessage = environmentBuildResponse.getEntity( String.class );
-        Environment environment = new Gson().fromJson( responseMessage, Environment.class );
-        return environment;
+        blueprint.setId( stack.getId() );
+        return blueprint;
     }
 
 
@@ -137,13 +153,13 @@ public class SubutaiClient
         runnerNodeGroup.setNumberOfNodes( stack.getRunnerCount() );
 
         // Send a request to add the nodegroup the specified environment
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
+        WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse addNodeGroupResponse = resource.path( "/add" )
+        String nodeGroupEncoded = UriComponent.encode( new Gson().toJson( runnerNodeGroup ), UriComponent.Type.QUERY_PARAM );
+
+        ClientResponse addNodeGroupResponse = resource.path( "/nodegroup" )
                                                       .queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
-                                                      .queryParam( RestParams.NODE_GROUP, new Gson().toJson( runnerNodeGroup ) )
+                                                      .queryParam( RestParams.NODE_GROUP, nodeGroupEncoded )
                                                       .type( MediaType.APPLICATION_JSON )
                                                       .post( ClientResponse.class );
 
@@ -164,14 +180,18 @@ public class SubutaiClient
      */
     public UUID getEnvironmentIdByInstanceId( UUID instanceId ) {
         // Send a request to add the nodegroup the specified environment
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
+        WebResource resource = client.resource( "http://" + httpAddress ).path( CONTAINER_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse environmentIdResponse = resource.path( "/getEnvironmentId" )
+        ClientResponse environmentIdResponse = resource.path( "/environmentId" )
                                                       .queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
                                                       .type( MediaType.APPLICATION_JSON )
-                                                      .post( ClientResponse.class );
+                                                      .get( ClientResponse.class );
+
+        if ( environmentIdResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
+            LOG.warn( "EnvironmentId query by instanceId {} is not successful! Error: {}", instanceId,
+                    environmentIdResponse.getEntity( String.class ) );
+            return null;
+        }
 
         String responseMessage = environmentIdResponse.getEntity( String.class );
         UUID environmentId = UUID.fromString( responseMessage );
@@ -184,51 +204,46 @@ public class SubutaiClient
      * @param environmentId
      * @return the environment for the given environmentId
      */
-    public Environment getEnvironmentByEnvironmentId( UUID environmentId ) {
+    public EnvironmentJson getEnvironmentByEnvironmentId( UUID environmentId ) {
         // Send a request to build the blueprint
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
+        WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse environmentGetResponse = resource.path( "/getEnvironment" )
-                                                        .queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
+        ClientResponse environmentGetResponse = resource.queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
                                                         .type( MediaType.APPLICATION_JSON )
                                                         .accept( MediaType.APPLICATION_JSON )
-                                                        .post( ClientResponse.class );
+                                                        .get( ClientResponse.class );
 
+        if ( environmentGetResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
+            LOG.error( "Environment query by environmentId {} is not successful!", environmentId );
+            return null;
+        }
         String responseMessage = environmentGetResponse.getEntity( String.class );
-        Environment environment = new Gson().fromJson( responseMessage, Environment.class );
+        EnvironmentJson environment = new Gson().fromJson( responseMessage, EnvironmentJson.class );
         return environment;
     }
 
 
     public boolean destroyEnvironment( UUID environmentId ) {
         // Send a request to build the blueprint
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
+        WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse environmentDestroyResponse = resource.path( "/destroy" )
-                                                        .queryParam( RestParams.ENVIRONMENT_ID,
-                                                                environmentId.toString() )
-                                                        .type( MediaType.APPLICATION_JSON )
-                                                        .delete( ClientResponse.class );
+        ClientResponse environmentDestroyResponse = resource.queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
+                                                            .type( MediaType.APPLICATION_JSON )
+                                                            .delete( ClientResponse.class );
+
 
         boolean success = environmentDestroyResponse.getStatus() == Response.Status.OK.getStatusCode() ? true : false;
         return success;
     }
 
 
-    public boolean destroyInstance( UUID instanceId ) {
+    public boolean destroyInstanceByInstanceId( UUID instanceId ) {
         // Send a request to build the blueprint
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
+        WebResource resource = client.resource( "http://" + httpAddress ).path( CONTAINER_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse instanceDestroyResponse = resource.path( "/destroy" )
-                                                            .queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
-                                                            .type( MediaType.APPLICATION_JSON )
-                                                            .delete( ClientResponse.class );
+        ClientResponse instanceDestroyResponse = resource.queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
+                                                         .type( MediaType.APPLICATION_JSON )
+                                                         .delete( ClientResponse.class );
 
         boolean success = instanceDestroyResponse.getStatus() == Response.Status.OK.getStatusCode() ? true : false;
         return success;
@@ -237,14 +252,12 @@ public class SubutaiClient
 
     public InstanceState getInstanceState( UUID instanceId ) {
         // Send a request to build the blueprint
-        DefaultClientConfig clientConfig = new DefaultClientConfig();
-        Client client = Client.create( clientConfig );
-        WebResource resource = client.resource( "http://" + httpAddress + "/cxf" ).path( ENVIRONMENT_BASE_ENDPOINT );
+        WebResource resource = client.resource( "http://" + httpAddress ).path( CONTAINER_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse instanceDestroyResponse = resource.path( "/getContainerState" )
+        ClientResponse instanceDestroyResponse = resource.path( "/state" )
                                                          .queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
                                                          .type( MediaType.APPLICATION_JSON )
-                                                         .delete( ClientResponse.class );
+                                                         .get( ClientResponse.class );
 
         String responseMessage = instanceDestroyResponse.getEntity( String.class );
         ContainerHostState containerHostState = new Gson().fromJson( responseMessage, ContainerHostState.class );
@@ -264,4 +277,15 @@ public class SubutaiClient
         return true;
     }
 
+
+    public String getHttpAddress()
+    {
+        return httpAddress;
+    }
+
+
+    public void setHttpAddress( final String httpAddress )
+    {
+        this.httpAddress = httpAddress;
+    }
 }
