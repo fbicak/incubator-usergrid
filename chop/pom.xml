@@ -85,6 +85,7 @@
     <guicyfig.version>3.3</guicyfig.version>
     <jackson.version>2.1.5</jackson.version>
     <jersey.version>1.18.1</jersey.version>
+    <gson.version>2.2.4</gson.version>
 
     <jetty.plugin.version>9.1.2.v20140210</jetty.plugin.version>
 
@@ -118,6 +119,7 @@
     <module>client</module>
     <module>webapp</module>
     <module>example</module>
+    <module>subutai-example</module>
     <module>integ</module>
     <module>subutai</module>
   </modules>
@@ -318,6 +320,12 @@
             <artifactId>stax-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>com.google.code.gson</groupId>
+        <artifactId>gson</artifactId>
+        <version>${gson.version}</version>
       </dependency>
 
       <dependency>

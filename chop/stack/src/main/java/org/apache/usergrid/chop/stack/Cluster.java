@@ -52,4 +52,14 @@ public interface Cluster {
      */
     @JsonProperty
     int getSize();
+
+
+    /**
+     * Name of the plugin which will be used to configure the cluster instances
+     * by Subutai
+     *
+     * @return name of the plugin to be used to configure the cluster instances by Subutai
+     */
+    @JsonProperty
+    String getConfiguratorPlugin();
 }

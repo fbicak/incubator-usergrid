@@ -63,6 +63,7 @@ public class TestSubutaiClient
     @BeforeClass
     public static void init() throws IOException
     {
+        //TODO remove the following line after finishing tests
 //                subutaiClient = new SubutaiClient( "172.16.11.188:8181" );
         subutaiClient = new SubutaiClient( "127.0.0.1:" + TEST_PORT );
 

@@ -19,9 +19,80 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
+import org.safehaus.subutai.common.host.ContainerHostState;
+import org.safehaus.subutai.common.protocol.NodeGroup;
+import org.safehaus.subutai.common.protocol.PlacementStrategy;
+import org.safehaus.subutai.core.environment.rest.ContainerJson;
+
+import org.apache.usergrid.chop.stack.BasicInstance;
+import org.apache.usergrid.chop.stack.BasicInstanceSpec;
+import org.apache.usergrid.chop.stack.Cluster;
+import org.apache.usergrid.chop.stack.ICoordinatedStack;
+import org.apache.usergrid.chop.stack.Instance;
+import org.apache.usergrid.chop.stack.InstanceSpec;
+import org.apache.usergrid.chop.stack.InstanceState;
 import org.apache.usergrid.chop.stack.Stack;
 
 
 public class SubutaiUtils
 {
+
+
+    public static Instance getInstanceFromContainer( ContainerJson containerHost ) {
+        BasicInstanceSpec instanceSpec = new BasicInstanceSpec();
+        instanceSpec.setImageId( containerHost.getTemplateName() );
+
+        String privateIpAddress = containerHost.getIp();
+        String publicIpAddress = containerHost.getIp();
+        String privateDnsName = containerHost.getIp();
+        String publicDnsName = containerHost.getIp();
+
+        ContainerHostState containerState;
+        containerState = containerHost.getState();
+        InstanceState instanceState = InstanceState.fromContainerHostState( containerState );
+        Instance instance = new BasicInstance( containerHost.getId().toString(), instanceSpec, instanceState,
+                privateDnsName, publicDnsName, privateIpAddress, publicIpAddress );
+        return instance;
+    }
+
+
+    public static NodeGroup getClusterNodeGroup( final Cluster cluster )
+    {
+        NodeGroup clusterNodeGroup = new NodeGroup();
+
+        clusterNodeGroup.setTemplateName( cluster.getInstanceSpec().getImageId() );
+        clusterNodeGroup.setName( getClusterNodeGroupName( cluster ) );
+        clusterNodeGroup.setNumberOfNodes( cluster.getSize() );
+        clusterNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
+        clusterNodeGroup.setLinkHosts( true );
+        clusterNodeGroup.setExchangeSshKeys( true );
+
+        return clusterNodeGroup;
+    }
+
+
+    public static NodeGroup getRunnerNodeGroup( final ICoordinatedStack stack, final InstanceSpec spec )
+    {
+        NodeGroup runnerNodeGroup = new NodeGroup();
+
+        runnerNodeGroup.setTemplateName( spec.getImageId() );
+        runnerNodeGroup.setName( getRunnersNodeGroupName( stack ) );
+        runnerNodeGroup.setNumberOfNodes( stack.getRunnerCount() );
+        runnerNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
+
+        return runnerNodeGroup;
+    }
+
+
+    public static String getClusterNodeGroupName( final Cluster cluster ){
+        return cluster.getName();
+    }
+
+
+    public static String getRunnersNodeGroupName( final Stack stack ){
+        return stack.getName() + "-runners";
+    }
+
+
+
 }
