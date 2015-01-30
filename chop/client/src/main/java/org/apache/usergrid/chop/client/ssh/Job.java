@@ -38,6 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.usergrid.chop.api.SshValues;
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
@@ -70,6 +72,18 @@ public class Job implements Callable<ResponseInfo> {
 
 
     private void setSession() {
+        // TODO check when Subutai works with ssh keys to see if Amazon and Subutai sessions can be merged
+        if ( value.getProviderName().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+            setSubutaiSession();
+        }
+        else if ( value.getProviderName().equals( AmazonProvider.PROVIDER_NAME ) ){
+            setAmazonSession();
+        }
+    }
+
+
+
+    private void setAmazonSession() {
         JSch ssh;
         // wait until SSH port of remote end comes up
         boolean success = waitActive( SESSION_CONNECT_TIMEOUT );
@@ -78,17 +92,46 @@ public class Job implements Callable<ResponseInfo> {
         }
 
         // try to open ssh session
+        String userName = Utils.DEFAULT_USER;
         try {
             Thread.sleep( 30000 );
             ssh = new JSch();
             ssh.addIdentity( value.getSshKeyFile() );
-            session = ssh.getSession( Utils.DEFAULT_USER, value.getPublicIpAddress() );
+            session = ssh.getSession( userName, value.getPublicIpAddress() );
             session.setConfig( "StrictHostKeyChecking", "no" );
             session.connect();
         }
         catch ( Exception e ) {
-            LOG.error( "Error while connecting to ssh session of " + value.getPublicIpAddress(), e );
-            session = null;
+            LOG.error( "Error while connecting to ssh session of " + value.getPublicIpAddress()
+                    + "with " + userName + " user:", e );
+        }
+    }
+
+
+    private void setSubutaiSession() {
+        JSch ssh;
+        // wait until SSH port of remote end comes up
+        boolean success = waitActive( SESSION_CONNECT_TIMEOUT );
+        if( ! success ) {
+            LOG.warn( "Port 22 of {} did not open in time", value.getPublicIpAddress() );
+        }
+
+        // try to open ssh session
+        String userName = Utils.SUBUTAI_USER;
+        try {
+            // TODO is this really necessary??
+//            Thread.sleep( 30000 );
+            ssh = new JSch();
+            // TODO replace password with ssh key file as you see below when Subutai works that way
+//            ssh.addIdentity( value.getSshKeyFile() );
+            session = ssh.getSession( userName, value.getPublicIpAddress() );
+            session.setConfig( "StrictHostKeyChecking", "no" );
+            session.setPassword( "ubuntu" );
+            session.connect();
+        }
+        catch ( Exception e ) {
+            LOG.error( "Error while connecting to ssh session of " + value.getPublicIpAddress() + "with " + userName
+                    + " user:", e );
         }
     }
 
@@ -120,7 +163,16 @@ public class Job implements Callable<ResponseInfo> {
         String message;
         try {
             channel = session.openChannel( "exec" );
-            ( ( ChannelExec ) channel ).setCommand( command.getCommand() );
+            // Append "sudo -S -p '' echo" so that if sudo asks for password, eliminate password prompt
+            // by doing it in the beginning
+            if ( value.getProviderName().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+                ( ( ChannelExec ) channel ).setCommand( "echo " + Utils.DEFAULT_SUBUTAI_PASSWORD
+                        + " | sudo -S -p '' echo > /dev/null && "
+                        + command.getCommand() );
+            }
+            else {
+                ( ( ChannelExec ) channel ).setCommand( command.getCommand() );
+            }
             channel.connect();
 
             BufferedReader inputReader = new BufferedReader( new InputStreamReader( channel.getInputStream() ) );
