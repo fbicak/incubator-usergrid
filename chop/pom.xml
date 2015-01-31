@@ -448,7 +448,7 @@
 
       <dependency>
         <groupId>org.safehaus.subutai</groupId>
-        <artifactId>environment-manager-rest</artifactId>
+        <artifactId>env-manager-rest</artifactId>
         <version>${subutai.version}</version>
         <exclusions>
           <exclusion>

@@ -103,7 +103,7 @@ public class TestSubutaiClient
         //        Stub rest endpoints
         //        Build environment by blueprint
         stubFor( post( urlPathEqualTo( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT ) )
-                        .withQueryParam( RestParams.ENVIRONMENT_BLUEPRINT, notMatching( "" ) )
+                        .withQueryParam( RestParams.ENVIRONMENT_TOPOLOGY, notMatching( "" ) )
                         .willReturn( aResponse()
                                 .withStatus( 200 )
                                 .withBody( new Gson().toJson( mockEnvironmentJson ) )

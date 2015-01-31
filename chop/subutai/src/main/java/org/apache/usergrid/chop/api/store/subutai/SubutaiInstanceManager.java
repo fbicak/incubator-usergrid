@@ -19,6 +19,19 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
+import com.google.inject.Inject;
+import org.apache.usergrid.chop.spi.InstanceManager;
+import org.apache.usergrid.chop.spi.LaunchResult;
+import org.apache.usergrid.chop.stack.ICoordinatedCluster;
+import org.apache.usergrid.chop.stack.ICoordinatedStack;
+import org.apache.usergrid.chop.stack.Instance;
+import org.apache.usergrid.chop.stack.InstanceSpec;
+import org.apache.usergrid.chop.stack.InstanceState;
+import org.safehaus.subutai.core.env.rest.ContainerJson;
+import org.safehaus.subutai.core.env.rest.EnvironmentJson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,23 +39,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-
-import org.safehaus.subutai.core.environment.rest.ContainerJson;
-import org.safehaus.subutai.core.environment.rest.EnvironmentJson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.usergrid.chop.spi.InstanceManager;
-import org.apache.usergrid.chop.spi.LaunchResult;
-import org.apache.usergrid.chop.stack.BasicCluster;
-import org.apache.usergrid.chop.stack.CoordinatedCluster;
-import org.apache.usergrid.chop.stack.ICoordinatedCluster;
-import org.apache.usergrid.chop.stack.ICoordinatedStack;
-import org.apache.usergrid.chop.stack.Instance;
-import org.apache.usergrid.chop.stack.InstanceSpec;
-import org.apache.usergrid.chop.stack.InstanceState;
-
-import com.google.inject.Inject;
 
 
 public class SubutaiInstanceManager implements InstanceManager

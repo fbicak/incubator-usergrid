@@ -19,32 +19,6 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
-import java.lang.reflect.Type;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
-import org.safehaus.subutai.common.host.ContainerHostState;
-import org.safehaus.subutai.common.protocol.EnvironmentBlueprint;
-import org.safehaus.subutai.common.protocol.NodeGroup;
-import org.safehaus.subutai.common.settings.Common;
-import org.safehaus.subutai.core.environment.rest.ContainerJson;
-import org.safehaus.subutai.core.environment.rest.EnvironmentJson;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.usergrid.chop.api.RestParams;
-import org.apache.usergrid.chop.stack.Cluster;
-import org.apache.usergrid.chop.stack.ICoordinatedCluster;
-import org.apache.usergrid.chop.stack.ICoordinatedStack;
-import org.apache.usergrid.chop.stack.Instance;
-import org.apache.usergrid.chop.stack.InstanceSpec;
-import org.apache.usergrid.chop.stack.InstanceState;
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.sun.jersey.api.client.Client;
@@ -52,6 +26,30 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.uri.UriComponent;
+import org.apache.usergrid.chop.api.RestParams;
+import org.apache.usergrid.chop.stack.Cluster;
+import org.apache.usergrid.chop.stack.ICoordinatedCluster;
+import org.apache.usergrid.chop.stack.ICoordinatedStack;
+import org.apache.usergrid.chop.stack.Instance;
+import org.apache.usergrid.chop.stack.InstanceSpec;
+import org.apache.usergrid.chop.stack.InstanceState;
+import org.safehaus.subutai.common.environment.NodeGroup;
+import org.safehaus.subutai.common.host.ContainerHostState;
+import org.safehaus.subutai.core.env.rest.ContainerJson;
+import org.safehaus.subutai.core.env.rest.EnvironmentJson;
+import org.safehaus.subutai.core.env.rest.TopologyJson;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.lang.reflect.Type;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 
 public class SubutaiClient
@@ -62,7 +60,7 @@ public class SubutaiClient
     private Client client;
 
     public static final String REST_BASE_ENDPOINT = "/cxf";
-    public static final String ENVIRONMENT_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/environment";
+    public static final String ENVIRONMENT_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/environment2";
     public static final String CONTAINER_BASE_ENDPOINT = ENVIRONMENT_BASE_ENDPOINT + "/container";
     public static final String CASSANDRA_PLUGIN_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/cassandra";
     public static final String CASSANDRA_PLUGIN_CONFIGURE_ENDPOINT = CASSANDRA_PLUGIN_BASE_ENDPOINT + "/configure_environment";
@@ -83,15 +81,15 @@ public class SubutaiClient
      * @return the environment created for the given stack
      */
     public EnvironmentJson createStackEnvironment( final ICoordinatedStack stack ) {
-        // Create the blueprint from the supplied stack
-        EnvironmentBlueprint blueprint = getBlueprintFromStack( stack );
+        // Create the topology from the supplied stack
+        TopologyJson topology = getTopologyFromStack( stack );
 
-        // Send a request to build the blueprint
+        // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
 
-        String blueprintEncoded = UriComponent.encode( gson.toJson( blueprint ), UriComponent.Type.QUERY_PARAM );
-        // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.ENVIRONMENT_BLUEPRINT, blueprintEncoded )
+        String blueprintEncoded = UriComponent.encode( gson.toJson( topology ), UriComponent.Type.QUERY_PARAM );
+        // Returns the uuid of the environment created from the supplied topology
+        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.ENVIRONMENT_TOPOLOGY, blueprintEncoded )
                                                           .type( MediaType.APPLICATION_JSON )
                                                           .post( ClientResponse.class );
 
@@ -109,19 +107,21 @@ public class SubutaiClient
     }
 
 
-    public EnvironmentBlueprint getBlueprintFromStack( final ICoordinatedStack stack )
+    public TopologyJson getTopologyFromStack( final ICoordinatedStack stack )
     {
-        EnvironmentBlueprint blueprint = new EnvironmentBlueprint( stack.getName(),
-                Common.DEFAULT_DOMAIN_NAME, true, true );
+        TopologyJson topology = new TopologyJson();
         Set<NodeGroup> clusterNodeGroups = new HashSet<NodeGroup>( stack.getClusters().size() );
 
         for ( Cluster cluster : stack.getClusters() ) {
             NodeGroup clusterNodeGroup = SubutaiUtils.getClusterNodeGroup( cluster );
             clusterNodeGroups.add( clusterNodeGroup );
         }
+        Map<UUID, Set<NodeGroup>> nodeGroupPlacement = new HashMap<UUID, Set<NodeGroup>>();
+        // TODO what is this UUID for???? Fix initialization accordingly!
+        nodeGroupPlacement.put( UUID.randomUUID(), clusterNodeGroups );
 
-        blueprint.setNodeGroups( clusterNodeGroups );
-        return blueprint;
+        topology.setNodeGroupPlacement( nodeGroupPlacement );
+        return topology;
     }
 
 
@@ -165,9 +165,13 @@ public class SubutaiClient
         // Returns the uuid of the environment created from the supplied blueprint
         String nodeGroupEncoded = UriComponent.encode( gson.toJson( runnerNodeGroup ), UriComponent.Type.QUERY_PARAM );
 
-        ClientResponse addNodeGroupResponse = resource.path( "/nodeGroup" )
+        // TODO Fix queryParam ENVIRONMENT_TOPOLOGY as it passes NodeGroup right now!
+        // it is not logical to provide environmentId along with topology which contains environmentName
+        // what if the id does not match the environmentName set for the topology??
+        // instead, it is much more logical to pass NodeGroup or set of Nodegroups as a parameter
+        ClientResponse addNodeGroupResponse = resource.path( "/grow" )
                                                       .queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
-                                                      .queryParam( RestParams.NODE_GROUP, nodeGroupEncoded )
+                                                      .queryParam( RestParams.ENVIRONMENT_TOPOLOGY, nodeGroupEncoded )
                                                       .type( MediaType.TEXT_HTML_TYPE )
 //                                                      .accept( MediaType.APPLICATION_JSON )
                                                       .post( ClientResponse.class );

@@ -19,11 +19,6 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
-import org.safehaus.subutai.common.host.ContainerHostState;
-import org.safehaus.subutai.common.protocol.NodeGroup;
-import org.safehaus.subutai.common.protocol.PlacementStrategy;
-import org.safehaus.subutai.core.environment.rest.ContainerJson;
-
 import org.apache.usergrid.chop.stack.BasicInstance;
 import org.apache.usergrid.chop.stack.BasicInstanceSpec;
 import org.apache.usergrid.chop.stack.Cluster;
@@ -32,6 +27,10 @@ import org.apache.usergrid.chop.stack.Instance;
 import org.apache.usergrid.chop.stack.InstanceSpec;
 import org.apache.usergrid.chop.stack.InstanceState;
 import org.apache.usergrid.chop.stack.Stack;
+import org.safehaus.subutai.common.environment.NodeGroup;
+import org.safehaus.subutai.common.host.ContainerHostState;
+import org.safehaus.subutai.common.protocol.PlacementStrategy;
+import org.safehaus.subutai.core.env.rest.ContainerJson;
 
 
 public class SubutaiUtils
@@ -58,14 +57,27 @@ public class SubutaiUtils
 
     public static NodeGroup getClusterNodeGroup( final Cluster cluster )
     {
-        NodeGroup clusterNodeGroup = new NodeGroup();
+        String name = getClusterNodeGroupName( cluster );
+        String templateName = cluster.getInstanceSpec().getImageId();
+        // TODO it does not make sense to define this parameter on client side at all!
+        String domainName = "intra.lan";
+        int numberOfContainers = cluster.getSize();
+        // TODO what is this variable??? Fix initialization
+        int sshGroupId = 1;
+        // TODO what is this variable??? Fix initialization
+        int hostsGroupId = 1;
+        PlacementStrategy containerPlacementStrategy = new PlacementStrategy( "ROUND_ROBIN" );
 
-        clusterNodeGroup.setTemplateName( cluster.getInstanceSpec().getImageId() );
-        clusterNodeGroup.setName( getClusterNodeGroupName( cluster ) );
-        clusterNodeGroup.setNumberOfNodes( cluster.getSize() );
-        clusterNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
-        clusterNodeGroup.setLinkHosts( true );
-        clusterNodeGroup.setExchangeSshKeys( true );
+        NodeGroup clusterNodeGroup = new NodeGroup( name, templateName, domainName, numberOfContainers,
+                sshGroupId, hostsGroupId, containerPlacementStrategy );
+
+
+//        clusterNodeGroup.setTemplateName( cluster.getInstanceSpec().getImageId() );
+//        clusterNodeGroup.setName( getClusterNodeGroupName( cluster ) );
+//        clusterNodeGroup.setNumberOfNodes( cluster.getSize() );
+//        clusterNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
+//        clusterNodeGroup.setLinkHosts( true );
+//        clusterNodeGroup.setExchangeSshKeys( true );
 
         return clusterNodeGroup;
     }
@@ -73,12 +85,26 @@ public class SubutaiUtils
 
     public static NodeGroup getRunnerNodeGroup( final ICoordinatedStack stack, final InstanceSpec spec )
     {
-        NodeGroup runnerNodeGroup = new NodeGroup();
 
-        runnerNodeGroup.setTemplateName( spec.getImageId() );
-        runnerNodeGroup.setName( getRunnersNodeGroupName( stack ) );
-        runnerNodeGroup.setNumberOfNodes( stack.getRunnerCount() );
-        runnerNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
+        String name = getRunnersNodeGroupName( stack );
+        String templateName = spec.getImageId();
+        // TODO it does not make sense to define this parameter on client side at all!
+        String domainName = "intra.lan";
+        int numberOfContainers = stack.getRunnerCount();
+        // TODO what is this variable??? Fix initialization
+        int sshGroupId = 1;
+        // TODO what is this variable??? Fix initialization
+        int hostsGroupId = 1;
+        PlacementStrategy containerPlacementStrategy = new PlacementStrategy( "ROUND_ROBIN" );
+
+        NodeGroup runnerNodeGroup = new NodeGroup( name, templateName, domainName, numberOfContainers,
+                sshGroupId, hostsGroupId, containerPlacementStrategy );
+
+
+//        runnerNodeGroup.setTemplateName( spec.getImageId() );
+//        runnerNodeGroup.setName( getRunnersNodeGroupName( stack ) );
+//        runnerNodeGroup.setNumberOfNodes( stack.getRunnerCount() );
+//        runnerNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
 
         return runnerNodeGroup;
     }
