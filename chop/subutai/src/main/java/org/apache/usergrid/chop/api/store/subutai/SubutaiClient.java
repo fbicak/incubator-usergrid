@@ -60,7 +60,8 @@ public class SubutaiClient
     private Client client;
 
     public static final String REST_BASE_ENDPOINT = "/cxf";
-    public static final String ENVIRONMENT_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/environment2";
+    public static final String ENVIRONMENT_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/environments";
+    public static final String PEER_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/peer";
     public static final String CONTAINER_BASE_ENDPOINT = ENVIRONMENT_BASE_ENDPOINT + "/container";
     public static final String CASSANDRA_PLUGIN_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/cassandra";
     public static final String CASSANDRA_PLUGIN_CONFIGURE_ENDPOINT = CASSANDRA_PLUGIN_BASE_ENDPOINT + "/configure_environment";
@@ -77,7 +78,7 @@ public class SubutaiClient
 
     /**
      *
-     * @param stack
+     * @param stack used to create an environment on Subutai
      * @return the environment created for the given stack
      */
     public EnvironmentJson createStackEnvironment( final ICoordinatedStack stack ) {
@@ -87,9 +88,9 @@ public class SubutaiClient
         // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
 
-        String blueprintEncoded = UriComponent.encode( gson.toJson( topology ), UriComponent.Type.QUERY_PARAM );
+        String topologyEncoded = UriComponent.encode( gson.toJson( topology ), UriComponent.Type.QUERY_PARAM );
         // Returns the uuid of the environment created from the supplied topology
-        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.ENVIRONMENT_TOPOLOGY, blueprintEncoded )
+        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.ENVIRONMENT_TOPOLOGY, topologyEncoded )
                                                           .type( MediaType.APPLICATION_JSON )
                                                           .post( ClientResponse.class );
 
@@ -117,18 +118,57 @@ public class SubutaiClient
             clusterNodeGroups.add( clusterNodeGroup );
         }
         Map<UUID, Set<NodeGroup>> nodeGroupPlacement = new HashMap<UUID, Set<NodeGroup>>();
-        // TODO what is this UUID for???? Fix initialization accordingly!
-        nodeGroupPlacement.put( UUID.randomUUID(), clusterNodeGroups );
+        UUID localPeerId = getLocalPeerId();
+        nodeGroupPlacement.put( localPeerId, clusterNodeGroups );
 
         topology.setNodeGroupPlacement( nodeGroupPlacement );
+        topology.setEnvironmentName( stack.getName() );
         return topology;
+    }
+
+
+
+    public TopologyJson getRunnerTopology( final ICoordinatedStack stack, InstanceSpec spec )
+    {
+        Set<NodeGroup> runnerNodeGroupSet = new HashSet<NodeGroup>();
+        runnerNodeGroupSet.add( SubutaiUtils.getRunnerNodeGroup( stack, spec ) );
+
+        TopologyJson topology = new TopologyJson();
+
+        Map<UUID, Set<NodeGroup>> nodeGroupPlacement = new HashMap<UUID, Set<NodeGroup>>();
+        UUID localPeerId = getLocalPeerId();
+        nodeGroupPlacement.put( localPeerId, runnerNodeGroupSet );
+
+        topology.setNodeGroupPlacement( nodeGroupPlacement );
+        topology.setEnvironmentName( stack.getName() );
+        return topology;
+    }
+
+
+    public UUID getLocalPeerId() {
+        // Send a request to build the topology
+        WebResource resource = client.resource( "http://" + httpAddress ).path( PEER_BASE_ENDPOINT );
+
+        // Returns the uuid of the peer
+        ClientResponse peerIdResponse = resource.path( "id" )
+                                                          .type( MediaType.APPLICATION_JSON )
+                                                          .get( ClientResponse.class );
+
+
+        if ( peerIdResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
+            LOG.error( "Could not retrieve the id of local peer! Error: {}", peerIdResponse.getEntity( String.class ) );
+            return null;
+        }
+
+        String responseMessage = peerIdResponse.getEntity( String.class );
+        return UUID.fromString( responseMessage );
     }
 
 
     /**
      *
-     * @param stack
-     * @param spec
+     * @param stack used to retrieve the environment which the stack instances are created on Subutai
+     * @param spec used to create nodeGroup to be deployed to an existing environment
      * @return creates runner instances for the specified stack with the given instance specification
      */
     public Set<Instance> createRunnersOnEnvironment( final ICoordinatedStack stack, final InstanceSpec spec ) {
@@ -144,7 +184,7 @@ public class SubutaiClient
 
             if ( coordinatedCluster.getInstances().size() != cluster.getSize() ) {
                 LOG.error( String.format( "{} number of instances are created for {} cluster out of {}. Not creating runner instances!",
-                        coordinatedCluster.getInstances().size()+"", cluster.getName(), cluster.getSize()+"" ) );
+                        coordinatedCluster.getInstances().size() + "", cluster.getName(), cluster.getSize() + "" ) );
                 return runnerInstances;
             }
         }
@@ -158,20 +198,16 @@ public class SubutaiClient
             return runnerInstances;
         }
 
-        NodeGroup runnerNodeGroup = SubutaiUtils.getRunnerNodeGroup( stack, spec );
+        TopologyJson runnerTopology = getRunnerTopology( stack, spec );
 
         // Send a request to add the nodegroup the specified environment
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        String nodeGroupEncoded = UriComponent.encode( gson.toJson( runnerNodeGroup ), UriComponent.Type.QUERY_PARAM );
+        String runnerTopologyEncoded = UriComponent.encode( gson.toJson( runnerTopology ), UriComponent.Type.QUERY_PARAM );
 
-        // TODO Fix queryParam ENVIRONMENT_TOPOLOGY as it passes NodeGroup right now!
-        // it is not logical to provide environmentId along with topology which contains environmentName
-        // what if the id does not match the environmentName set for the topology??
-        // instead, it is much more logical to pass NodeGroup or set of Nodegroups as a parameter
         ClientResponse addNodeGroupResponse = resource.path( "/grow" )
                                                       .queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
-                                                      .queryParam( RestParams.ENVIRONMENT_TOPOLOGY, nodeGroupEncoded )
+                                                      .queryParam( RestParams.ENVIRONMENT_TOPOLOGY, runnerTopologyEncoded )
                                                       .type( MediaType.TEXT_HTML_TYPE )
 //                                                      .accept( MediaType.APPLICATION_JSON )
                                                       .post( ClientResponse.class );
@@ -201,7 +237,7 @@ public class SubutaiClient
 
     /**
      *
-     * @param instanceId
+     * @param instanceId id of the instance to find the environmentId it belongs to
      * @return the environmentId for the given instance
      */
     public UUID getEnvironmentIdByInstanceId( UUID instanceId ) {
@@ -227,7 +263,7 @@ public class SubutaiClient
 
     /**
      *
-     * @param environmentId
+     * @param environmentId id of the environment to retrieve the environment details
      * @return the environment for the given environmentId
      */
     public EnvironmentJson getEnvironmentByEnvironmentId( UUID environmentId ) {
@@ -321,16 +357,15 @@ public class SubutaiClient
 
     /**
      *
-     * @param stack
      * @param cluster
      * @param instances
      * @return true if the cluster is successfully configured
      */
-    public boolean configureCluster( final ICoordinatedStack stack, final Cluster cluster,
+    public boolean configureCluster( final Cluster cluster,
                                      final Collection<Instance> instances ) {
         LOG.info( "Configuring the cluster {} with {} plugin", cluster.getName(), cluster.getConfiguratorPlugin() );
 
-        SubutaiPlugin plugin = getSubutaiPluginFromString( cluster.getConfiguratorPlugin() );
+        SubutaiPlugin plugin = SubutaiUtils.getSubutaiPluginFromString( cluster.getConfiguratorPlugin() );
 
         if ( plugin == null ) {
             LOG.error( "{} plugin is either invalid or not supported by Subutai/Chop! "
@@ -338,14 +373,14 @@ public class SubutaiClient
             return false;
         }
 
-        boolean success = false;
+        boolean success;
 
         switch ( plugin ) {
             case Cassandra:
-                success = configureCassandraCluster( stack, cluster, instances );
+                success = configureCassandraCluster( cluster, instances );
                 break;
             case Hadoop:
-                success = configureHadoopCluster( stack, cluster, instances );
+                success = configureHadoopCluster( cluster, instances );
                 break;
             default:
                 success = false;
@@ -363,8 +398,7 @@ public class SubutaiClient
     }
 
 
-    public boolean configureCassandraCluster( final ICoordinatedStack stack, final Cluster cluster,
-                                              final Collection<Instance> clusterInstances ) {
+    public boolean configureCassandraCluster( final Cluster cluster, final Collection<Instance> clusterInstances ) {
 
         UUID environmentId = getEnvironmentIdByInstanceId( UUID.fromString( clusterInstances.iterator().next().getId() ) );
 
@@ -415,10 +449,7 @@ public class SubutaiClient
         else {
             LOG.error( "Configuration of {} cluster failed! Error: {}", cluster.getName(),
                     configureCassandraResponse.getEntity( String.class ) );
-            //TODO ENABLE THIS RETURN WHEN THE PLUGIN CONFIGURATION WORKS
-            LOG.error( "!!! PRETENDING LIKE CONFIGURATION IS SUCCESS!!! DO NOT FORGOT TO ENABLE THE RETURN TYPE BELOW !!!" );
-            return true;
-//            return success;
+            return success;
         }
 
         // Start cluster
@@ -438,36 +469,15 @@ public class SubutaiClient
                     startCassandraResponse.getEntity( String.class ) );
         }
 
-        //TODO CHANGE THIS RETURN REAL SUCCESS STATUS INSTEAD OF ALWAYS TRUE
-        //TODO WHEN THE PLUGIN WORKS
-        if ( ! success ) {
-            LOG.error( "!!! PRETENDING LIKE CLUSTER PROCESSES START IS SUCCESS!!! DO NOT FORGOT TO ENABLE THE RETURN TYPE BELOW !!!" );
-            success = true;
-        }
         return success;
     }
 
 
-    public boolean configureHadoopCluster( final ICoordinatedStack stack, final Cluster cluster,
-                                           final Collection<Instance> instances ) {
+    public boolean configureHadoopCluster( final Cluster cluster, final Collection<Instance> instances ) {
         // TODO implement this functionality
         return true;
     }
 
-
-    private SubutaiPlugin getSubutaiPluginFromString( final String configuratorPlugin )
-    {
-        SubutaiPlugin plugin = null;
-
-        if ( configuratorPlugin.toLowerCase().equals( "cassandra" ) ) {
-            plugin = SubutaiPlugin.Cassandra;
-        }
-        else if ( configuratorPlugin.toLowerCase().equals( "hadoop" ) ) {
-            plugin = SubutaiPlugin.Hadoop;
-        }
-
-        return plugin;
-    }
 
 
     public String getHttpAddress()

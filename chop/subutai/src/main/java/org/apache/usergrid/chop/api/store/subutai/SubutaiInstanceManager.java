@@ -93,9 +93,15 @@ public class SubutaiInstanceManager implements InstanceManager
             LOG.warn( "Could not find the environment that instance(id:{}) belongs to, " +
                     "and could not check if there is any instance left on the environment. " +
                     "Therefore not destroying the environment if environment does not have instance left!" );
+            return;
         }
         EnvironmentJson environment =
                 subutaiClient.getEnvironmentByEnvironmentId( environmentId );
+        if ( environment == null ) {
+            LOG.warn( "Could not find environment({}), not destroying the environment!", environmentId );
+            return;
+        }
+
         if ( environment.getContainers().size() == 0 ) {
             LOG.info( "Destroying environment {} since no instance left in it.",
                     environment.getName()+"(" + environment.getId() + ")" );
@@ -145,7 +151,7 @@ public class SubutaiInstanceManager implements InstanceManager
         }
 
         if ( cluster.getConfiguratorPlugin() != null ) {
-            boolean isConfigurationSuccessful = subutaiClient.configureCluster( stack, cluster, instances );
+            boolean isConfigurationSuccessful = subutaiClient.configureCluster( cluster, instances );
 
             if ( ! isConfigurationSuccessful ) {
                 LOG.error( "Configuration of {} cluster failed with {} plugin! Destroying environment...",

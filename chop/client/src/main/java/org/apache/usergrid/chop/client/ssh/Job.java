@@ -122,7 +122,7 @@ public class Job implements Callable<ResponseInfo> {
             // TODO is this really necessary??
 //            Thread.sleep( 30000 );
             ssh = new JSch();
-            // TODO replace password with ssh key file as you see below when Subutai works that way
+            // TODO replace password with ssh key file as you see below when Subutai has key management
 //            ssh.addIdentity( value.getSshKeyFile() );
             session = ssh.getSession( userName, value.getPublicIpAddress() );
             session.setConfig( "StrictHostKeyChecking", "no" );

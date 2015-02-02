@@ -59,25 +59,13 @@ public class SubutaiUtils
     {
         String name = getClusterNodeGroupName( cluster );
         String templateName = cluster.getInstanceSpec().getImageId();
-        // TODO it does not make sense to define this parameter on client side at all!
-        String domainName = "intra.lan";
         int numberOfContainers = cluster.getSize();
-        // TODO what is this variable??? Fix initialization
-        int sshGroupId = 1;
-        // TODO what is this variable??? Fix initialization
-        int hostsGroupId = 1;
+        int sshGroupId = getClusterGroupId( cluster );
+        int hostsGroupId = getClusterGroupId( cluster );
         PlacementStrategy containerPlacementStrategy = new PlacementStrategy( "ROUND_ROBIN" );
 
-        NodeGroup clusterNodeGroup = new NodeGroup( name, templateName, domainName, numberOfContainers,
+        NodeGroup clusterNodeGroup = new NodeGroup( name, templateName, numberOfContainers,
                 sshGroupId, hostsGroupId, containerPlacementStrategy );
-
-
-//        clusterNodeGroup.setTemplateName( cluster.getInstanceSpec().getImageId() );
-//        clusterNodeGroup.setName( getClusterNodeGroupName( cluster ) );
-//        clusterNodeGroup.setNumberOfNodes( cluster.getSize() );
-//        clusterNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
-//        clusterNodeGroup.setLinkHosts( true );
-//        clusterNodeGroup.setExchangeSshKeys( true );
 
         return clusterNodeGroup;
     }
@@ -85,28 +73,32 @@ public class SubutaiUtils
 
     public static NodeGroup getRunnerNodeGroup( final ICoordinatedStack stack, final InstanceSpec spec )
     {
-
         String name = getRunnersNodeGroupName( stack );
         String templateName = spec.getImageId();
-        // TODO it does not make sense to define this parameter on client side at all!
-        String domainName = "intra.lan";
         int numberOfContainers = stack.getRunnerCount();
-        // TODO what is this variable??? Fix initialization
-        int sshGroupId = 1;
-        // TODO what is this variable??? Fix initialization
-        int hostsGroupId = 1;
+        int sshGroupId = getRunnerGroupId( stack );
+        int hostsGroupId = getRunnerGroupId( stack );
         PlacementStrategy containerPlacementStrategy = new PlacementStrategy( "ROUND_ROBIN" );
 
-        NodeGroup runnerNodeGroup = new NodeGroup( name, templateName, domainName, numberOfContainers,
+        NodeGroup runnerNodeGroup = new NodeGroup( name, templateName, numberOfContainers,
                 sshGroupId, hostsGroupId, containerPlacementStrategy );
 
-
-//        runnerNodeGroup.setTemplateName( spec.getImageId() );
-//        runnerNodeGroup.setName( getRunnersNodeGroupName( stack ) );
-//        runnerNodeGroup.setNumberOfNodes( stack.getRunnerCount() );
-//        runnerNodeGroup.setPlacementStrategy( new PlacementStrategy( "ROUND_ROBIN" ) );
-
         return runnerNodeGroup;
+    }
+
+
+    public static SubutaiPlugin getSubutaiPluginFromString( final String configuratorPlugin )
+    {
+        SubutaiPlugin plugin = null;
+
+        if ( configuratorPlugin.toLowerCase().equals( "cassandra" ) ) {
+            plugin = SubutaiPlugin.Cassandra;
+        }
+        else if ( configuratorPlugin.toLowerCase().equals( "hadoop" ) ) {
+            plugin = SubutaiPlugin.Hadoop;
+        }
+
+        return plugin;
     }
 
 
@@ -119,6 +111,15 @@ public class SubutaiUtils
         return stack.getName() + "-runners";
     }
 
+
+    private static int getClusterGroupId( Cluster cluster ) {
+        return 1;
+    }
+
+
+    private static int getRunnerGroupId( ICoordinatedStack stack ) {
+        return 1;
+    }
 
 
 }

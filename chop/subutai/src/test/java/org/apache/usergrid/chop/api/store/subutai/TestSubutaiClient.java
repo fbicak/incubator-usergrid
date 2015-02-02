@@ -13,10 +13,10 @@ import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.safehaus.subutai.common.environment.EnvironmentStatus;
 import org.safehaus.subutai.common.host.ContainerHostState;
-import org.safehaus.subutai.core.environment.api.helper.EnvironmentStatusEnum;
-import org.safehaus.subutai.core.environment.rest.ContainerJson;
-import org.safehaus.subutai.core.environment.rest.EnvironmentJson;
+import org.safehaus.subutai.core.env.rest.ContainerJson;
+import org.safehaus.subutai.core.env.rest.EnvironmentJson;
 
 import org.apache.usergrid.chop.api.Commit;
 import org.apache.usergrid.chop.api.Module;
@@ -97,7 +97,7 @@ public class TestSubutaiClient
         }
 
         mockEnvironmentJson = new EnvironmentJson( environmentId, stack.getName(),
-                EnvironmentStatusEnum.HEALTHY, "", containers );
+                EnvironmentStatus.HEALTHY, "", containers );
 
 
         //        Stub rest endpoints

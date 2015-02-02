@@ -194,8 +194,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         runnerSpec.setType( providerParams.getInstanceType() );
         runnerSpec.setKeyName( providerParams.getKeyName() );
 
-        LaunchResult result = instanceManager.launchRunners( stack, runnerSpec,
-                chopUiFig.getLaunchClusterTimeout() );
+        LaunchResult result = instanceManager.launchRunners( stack, runnerSpec, chopUiFig.getLaunchClusterTimeout() );
 
         for ( Instance instance : result.getInstances() ) {
             launchedInstances.add( instance.getId() );
