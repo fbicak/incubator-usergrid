@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.usergrid.chop.api;
+package org.apache.usergrid.chop.example.subutai;
 
 
-public interface SshValues {
-    public String getHostname();
-    public String getPublicIpAddress();
-    public String getSshKeyFile();
-    public String getProviderName();
+/**
+ * A power source for watches.
+ */
+public interface PowerSource {
+    boolean hasPower();
+    void refill( long energyTime );
 }

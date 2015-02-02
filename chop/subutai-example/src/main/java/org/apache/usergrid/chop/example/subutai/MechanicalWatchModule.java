@@ -16,12 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.usergrid.chop.api;
+package org.apache.usergrid.chop.example.subutai;
 
 
-public interface SshValues {
-    public String getHostname();
-    public String getPublicIpAddress();
-    public String getSshKeyFile();
-    public String getProviderName();
+import com.google.inject.AbstractModule;
+
+
+/**
+ * A Guice {@link com.google.inject.Module} for mechanical watches.
+ */
+public class MechanicalWatchModule extends AbstractModule {
+    protected void configure() {
+        bind( PowerSource.class ).to( Mainspring.class );
+        bind( Watch.class ).to( MechanicalWatch.class );
+    }
 }

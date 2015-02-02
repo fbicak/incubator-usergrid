@@ -132,13 +132,25 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
                 return null;
             }
 
-            LaunchResult result = instanceManager.launchCluster( stack, cluster,
-                    chopUiFig.getLaunchClusterTimeout() );
+            LaunchResult result = instanceManager.launchCluster( stack, cluster, chopUiFig.getLaunchClusterTimeout() );
 
             for ( Instance instance : result.getInstances() ) {
                 launchedInstances.add( instance.getId() );
                 cluster.add( instance );
             }
+
+            // Check if all instances are created for the cluster
+            if ( cluster.getInstances().size() != cluster.getSize() ) {
+                LOG.error( String.format( "%s number of instances are created for %s cluster out of %s." +
+                                " Aborting and terminating launched instances...!",
+                        cluster.getInstances().size(), cluster.getName(), cluster.getSize() ) );
+                instanceManager.terminateInstances( launchedInstances );
+                stack.setSetupState( SetupStackSignal.FAIL );
+                stack.notifyAll();
+                return null;
+            }
+
+            // TODO enable the below code block after Command execution on Subutai instances works
 
             /** Setup system properties, deploy the scripts and execute them on cluster instances */
             boolean success = false;
@@ -171,7 +183,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         }
         if ( ! ( new File( keyFile ) ).exists() ) {
             errorMessage = "Key file " + keyFile + " for runners not found";
-            LOG.warn( errorMessage + ", aborting and terminating launched instances..." );
+            LOG.warn( errorMessage + ", aborting and terminating launched instances if not terminated already..." );
             instanceManager.terminateInstances( launchedInstances );
             stack.setSetupState( SetupStackSignal.FAIL );
             stack.notifyAll();
@@ -182,14 +194,23 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         runnerSpec.setType( providerParams.getInstanceType() );
         runnerSpec.setKeyName( providerParams.getKeyName() );
 
-        LaunchResult result = instanceManager.launchRunners( stack, runnerSpec,
-                chopUiFig.getLaunchClusterTimeout() );
+        LaunchResult result = instanceManager.launchRunners( stack, runnerSpec, chopUiFig.getLaunchClusterTimeout() );
 
         for ( Instance instance : result.getInstances() ) {
             launchedInstances.add( instance.getId() );
             stack.addRunnerInstance( instance );
         }
 
+        if ( stack.getRunnerInstances().size() != stack.getRunnerCount() ) {
+            LOG.error( String.format( "%s number of runner instances are created for %s stack out of %s." +
+                            " Aborting and terminating launched instances if not terminated already...",
+                    stack.getRunnerInstances().size(), stack.getName(), stack.getRunnerCount() ) );
+            instanceManager.terminateInstances( launchedInstances );
+            stack.setSetupState( SetupStackSignal.FAIL );
+            stack.notifyAll();
+            return null;
+        }
+        // TODO enable the below code block after Command execution on Subutai instances works
         /** Deploy and start runner.jar on instances */
         boolean success = false;
         try {

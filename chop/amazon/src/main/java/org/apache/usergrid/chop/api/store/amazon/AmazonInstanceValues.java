@@ -27,13 +27,13 @@ import com.google.common.base.Preconditions;
 /**
  * A simple values holder for Amazon Instance based associations.
  */
-public class InstanceValues implements SshValues {
+public class AmazonInstanceValues implements SshValues {
 
     private String sshKeyFile;
     private Instance instance;
 
 
-    public InstanceValues( Instance instance, String sshKeyFile ) {
+    public AmazonInstanceValues( Instance instance, String sshKeyFile ) {
         Preconditions.checkNotNull( sshKeyFile, "The 'sshKeyFile' parameter cannot be null." );
         Preconditions.checkNotNull( instance, "The 'instance parameter cannot be null." );
         Preconditions.checkState( instance.getPublicIpAddress() != null && ( ! instance.getPublicIpAddress().isEmpty() )
@@ -59,6 +59,13 @@ public class InstanceValues implements SshValues {
     @Override
     public String getSshKeyFile() {
         return sshKeyFile;
+    }
+
+
+    @Override
+    public String getProviderName()
+    {
+        return AmazonProvider.PROVIDER_NAME;
     }
 }
 

@@ -16,12 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.usergrid.chop.api;
+package org.apache.usergrid.chop.example.subutai;
 
 
-public interface SshValues {
-    public String getHostname();
-    public String getPublicIpAddress();
-    public String getSshKeyFile();
-    public String getProviderName();
+/**
+ *  A simple watch battery.
+ */
+public class SimpleBattery extends Battery {
+    @Override
+    public void refill( final long energyTime ) {
+        throw new UnsupportedOperationException( "This battery is not rechargeable." );
+    }
 }

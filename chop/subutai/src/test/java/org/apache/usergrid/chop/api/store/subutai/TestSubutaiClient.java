@@ -13,10 +13,10 @@ import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.safehaus.subutai.common.environment.EnvironmentStatus;
 import org.safehaus.subutai.common.host.ContainerHostState;
-import org.safehaus.subutai.core.environment.api.helper.EnvironmentStatusEnum;
-import org.safehaus.subutai.core.environment.rest.ContainerJson;
-import org.safehaus.subutai.core.environment.rest.EnvironmentJson;
+import org.safehaus.subutai.core.env.rest.ContainerJson;
+import org.safehaus.subutai.core.env.rest.EnvironmentJson;
 
 import org.apache.usergrid.chop.api.Commit;
 import org.apache.usergrid.chop.api.Module;
@@ -63,6 +63,7 @@ public class TestSubutaiClient
     @BeforeClass
     public static void init() throws IOException
     {
+        //TODO remove the following line after finishing tests
 //                subutaiClient = new SubutaiClient( "172.16.11.188:8181" );
         subutaiClient = new SubutaiClient( "127.0.0.1:" + TEST_PORT );
 
@@ -96,13 +97,13 @@ public class TestSubutaiClient
         }
 
         mockEnvironmentJson = new EnvironmentJson( environmentId, stack.getName(),
-                EnvironmentStatusEnum.HEALTHY, "", containers );
+                EnvironmentStatus.HEALTHY, "", containers );
 
 
         //        Stub rest endpoints
         //        Build environment by blueprint
         stubFor( post( urlPathEqualTo( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT ) )
-                        .withQueryParam( RestParams.ENVIRONMENT_BLUEPRINT, notMatching( "" ) )
+                        .withQueryParam( RestParams.ENVIRONMENT_TOPOLOGY, notMatching( "" ) )
                         .willReturn( aResponse()
                                 .withStatus( 200 )
                                 .withBody( new Gson().toJson( mockEnvironmentJson ) )

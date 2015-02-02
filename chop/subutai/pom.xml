@@ -129,7 +129,12 @@
 
     <dependency>
       <groupId>org.safehaus.subutai</groupId>
-      <artifactId>environment-manager-rest</artifactId>
+      <artifactId>env-manager-rest</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
     </dependency>
 
   </dependencies>
