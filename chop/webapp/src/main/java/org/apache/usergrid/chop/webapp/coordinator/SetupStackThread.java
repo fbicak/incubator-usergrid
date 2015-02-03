@@ -150,8 +150,6 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
                 return null;
             }
 
-            // TODO enable the below code block after Command execution on Subutai instances works
-
             /** Setup system properties, deploy the scripts and execute them on cluster instances */
             boolean success = false;
             try {
@@ -210,7 +208,6 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
             stack.notifyAll();
             return null;
         }
-        // TODO enable the below code block after Command execution on Subutai instances works
         /** Deploy and start runner.jar on instances */
         boolean success = false;
         try {

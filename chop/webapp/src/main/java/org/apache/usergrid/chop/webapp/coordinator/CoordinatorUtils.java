@@ -447,10 +447,17 @@ public class CoordinatorUtils {
          * This assumes an appropriate java is existing at /usr/bin/java on given instances,
          * so imageId for runners should be selected accordingly.
          */
+        chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
+
+
         sb = new StringBuilder();
         sb.append( "sudo su -c \"nohup /usr/bin/java -Darchaius.deployment.environment=CHOP -jar " )
-          .append( destFile )
-          .append( " > /var/log/chop-runner.log 2>&1 &\"" );
+          .append( destFile );
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            sb.append( " -p " + SubutaiProvider.PROVIDER_NAME );
+            LOG.info( "Configuring runners according to " + chopUiFig.getServiceProvider() + " provider..." );
+        }
+        sb.append( " > /var/log/chop-runner.log 2>&1 &\"" );
 
         commands.add( new SSHCommand( sb.toString() ) );
 

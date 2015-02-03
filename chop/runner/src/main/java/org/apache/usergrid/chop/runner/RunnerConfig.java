@@ -31,12 +31,17 @@ import javax.servlet.ServletContextEvent;
 
 import org.apache.usergrid.chop.api.Project;
 import org.apache.usergrid.chop.api.Runner;
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
 import org.apache.usergrid.chop.api.store.amazon.Ec2Metadata;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.spi.RunnerRegistry;
 import org.safehaus.guicyfig.Env;
 import org.safehaus.jettyjam.utils.TestMode;
+import org.safehaus.subutai.common.settings.Common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.commons.cli.CommandLine;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -52,6 +57,7 @@ public class RunnerConfig extends GuiceServletContextListener {
     private Project project;
     private Runner runner;
     private ServletFig servletFig;
+    private String providerName = AmazonProvider.PROVIDER_NAME;
     private boolean registered = false;
 
 
@@ -84,6 +90,20 @@ public class RunnerConfig extends GuiceServletContextListener {
     @Override
     public void contextInitialized( ServletContextEvent servletContextEvent ) {
         super.contextInitialized( servletContextEvent );
+
+        if (RunnerAppJettyRunner.getCommandLine() != null) {
+            CommandLine cl = RunnerAppJettyRunner.getCommandLine();
+            if ( cl.hasOption( 'p' ) ) {
+                String serviceProvider = cl.getOptionValue( 'p' );
+                if ( serviceProvider.toLowerCase().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+                    providerName = SubutaiProvider.PROVIDER_NAME;
+                }
+                else {
+                    providerName = AmazonProvider.PROVIDER_NAME;
+                }
+                LOG.info("The -p option has been provided: runner will use " + providerName + " as a service provider.");
+            }
+        }
 
         /*
          * --------------------------------------------------------------------
@@ -231,7 +251,13 @@ public class RunnerConfig extends GuiceServletContextListener {
             }
         }
         runner.bypass( Runner.SERVER_PORT_KEY, "" + jettyRunner.getPort() );
-        runner.bypass( Runner.URL_KEY, "https://" + runner.getHostname() + ":" + runner.getServerPort() );
+
+        if ( providerName.equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            runner.bypass( Runner.URL_KEY, "https://" + runner.getHostname() + "." + Common.DEFAULT_DOMAIN_NAME
+                    + ":" + runner.getServerPort() );
+        } else {
+            runner.bypass( Runner.URL_KEY, "https://" + runner.getHostname() + ":" + runner.getServerPort() );
+        }
 
         final RunnerRegistry registry = getInjector().getInstance( RunnerRegistry.class );
         registry.register( runner );
