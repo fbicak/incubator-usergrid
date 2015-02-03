@@ -97,7 +97,7 @@ public class TestSubutaiClient
         }
 
         mockEnvironmentJson = new EnvironmentJson( environmentId, stack.getName(),
-                EnvironmentStatus.HEALTHY, "", containers );
+                EnvironmentStatus.HEALTHY, containers );
 
 
         //        Stub rest endpoints
@@ -110,8 +110,7 @@ public class TestSubutaiClient
                                    )
                );
         //        Get environment by environmentId
-        stubFor( get( urlPathEqualTo( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT ) )
-                        .withQueryParam( RestParams.ENVIRONMENT_ID, notMatching( "" ) )
+        stubFor( get( urlMatching( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT + "/.+" ) )
                         .willReturn( aResponse()
                                         .withStatus( 200 )
                                         .withBody( new Gson().toJson( mockEnvironmentJson ) )

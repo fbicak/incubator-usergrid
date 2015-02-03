@@ -270,7 +270,7 @@ public class SubutaiClient
         // Send a request to build the blueprint
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        ClientResponse environmentGetResponse = resource.queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
+        ClientResponse environmentGetResponse = resource.path( environmentId.toString() )
                                                         .type( MediaType.APPLICATION_JSON )
                                                         .accept( MediaType.APPLICATION_JSON )
                                                         .get( ClientResponse.class );
