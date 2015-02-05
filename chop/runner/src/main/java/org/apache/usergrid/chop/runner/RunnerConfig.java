@@ -253,6 +253,7 @@ public class RunnerConfig extends GuiceServletContextListener {
         runner.bypass( Runner.SERVER_PORT_KEY, "" + jettyRunner.getPort() );
 
         if ( providerName.equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            // TODO get the domain name via rest calls to Subutai peer
             runner.bypass( Runner.URL_KEY, "https://" + runner.getHostname() + "." + Common.DEFAULT_DOMAIN_NAME
                     + ":" + runner.getServerPort() );
         } else {

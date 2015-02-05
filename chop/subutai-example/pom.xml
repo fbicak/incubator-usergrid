@@ -14,6 +14,10 @@
     A test project used to test the plugin and components of Chop.
   </description>
 
+  <properties>
+    <datastax.version>2.0.1</datastax.version>
+  </properties>
+
 
   <dependencies>
     <dependency>
@@ -36,6 +40,18 @@
     <dependency>
       <groupId>com.google.inject</groupId>
       <artifactId>guice</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.fluttercode.datafactory</groupId>
+      <artifactId>datafactory</artifactId>
+      <version>0.8</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.datastax.cassandra</groupId>
+      <artifactId>cassandra-driver-core</artifactId>
+      <version>${datastax.version}</version>
     </dependency>
 
     <dependency>
@@ -95,7 +111,7 @@
           <password>${chop.coordinator.password}</password>
           <endpoint>https://${chop.coordinator.url}:8443</endpoint>
           <testPackageBase>org.apache.usergrid.chop.example</testPackageBase>
-          <runnerCount>2</runnerCount>
+          <runnerCount>1</runnerCount>
         </configuration>
       </plugin>
 
