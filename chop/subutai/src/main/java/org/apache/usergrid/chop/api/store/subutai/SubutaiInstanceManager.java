@@ -84,7 +84,36 @@ public class SubutaiInstanceManager implements InstanceManager
 
         UUID environmentId = subutaiClient
                 .getEnvironmentIdByInstanceId( UUID.fromString( instanceIds.iterator().next() ) );
+
+        EnvironmentJson environment =
+                subutaiClient.getEnvironmentByEnvironmentId( environmentId );
+
+        // Destroy the environment if all the instances are inside the same environment
+        // and there is no other instances inside the environment than the provided ones
+        if ( instanceIds.size() == environment.getContainers().size() ) {
+            LOG.debug( "Checking if all the instances are in the same environment" );
+            int matchCount = 0;
+            for ( String instanceId : instanceIds ) {
+                for ( ContainerJson container : environment.getContainers() ) {
+                    if ( instanceId.equals( container.getId().toString() ) ) {
+                        matchCount++;
+                        break;
+                    }
+                }
+            }
+
+            if ( matchCount == instanceIds.size() ) {
+                LOG.info( "Environment {} does not contain other instances than provided instances to be terminated. " +
+                        "Therefore, destroying the environment completely...", environment.getName() );
+                subutaiClient.destroyEnvironment( environmentId );
+                return;
+            }
+            LOG.debug( "Not all the instances are in the same environment, so destroying only provided instances." );
+        }
+
         for ( String instanceId : instanceIds ) {
+            environmentId = subutaiClient
+                    .getEnvironmentIdByInstanceId( UUID.fromString( instanceIds.iterator().next() ) );
             subutaiClient.destroyInstanceByInstanceId( UUID.fromString( instanceId ) );
         }
 
@@ -95,8 +124,7 @@ public class SubutaiInstanceManager implements InstanceManager
                     "Therefore not destroying the environment if environment does not have instance left!" );
             return;
         }
-        EnvironmentJson environment =
-                subutaiClient.getEnvironmentByEnvironmentId( environmentId );
+        environment = subutaiClient.getEnvironmentByEnvironmentId( environmentId );
         if ( environment == null ) {
             LOG.warn( "Could not find environment({}), not destroying the environment!", environmentId );
             return;
