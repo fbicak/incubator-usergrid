@@ -16,8 +16,8 @@
 
   <properties>
     <datastax.version>2.0.1</datastax.version>
+    <datafactory.version>0.8</datafactory.version>
   </properties>
-
 
   <dependencies>
     <dependency>
@@ -45,7 +45,7 @@
     <dependency>
       <groupId>org.fluttercode.datafactory</groupId>
       <artifactId>datafactory</artifactId>
-      <version>0.8</version>
+      <version>${datafactory.version}</version>
     </dependency>
 
     <dependency>
@@ -111,7 +111,7 @@
           <password>${chop.coordinator.password}</password>
           <endpoint>https://${chop.coordinator.url}:8443</endpoint>
           <testPackageBase>org.apache.usergrid.chop.example</testPackageBase>
-          <runnerCount>1</runnerCount>
+          <runnerCount>6</runnerCount>
         </configuration>
       </plugin>
 

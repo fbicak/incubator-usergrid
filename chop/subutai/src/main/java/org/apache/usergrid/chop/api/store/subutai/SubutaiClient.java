@@ -449,9 +449,7 @@ public class SubutaiClient
         else {
             LOG.error( "Configuration of {} cluster failed! Error: {}", cluster.getName(),
                     configureCassandraResponse.getEntity( String.class ) );
-            // TODO remove this when the plugin rests works as expected and enable return statement below
-            LOG.warn( "Preteding configuration worked succesfully!" );
-//            return success;
+            return success;
         }
 
 
@@ -484,12 +482,6 @@ public class SubutaiClient
             }
 
         } while ( !success && ( tryCount < maxTryCount ) );
-
-        // TODO remove this when the plugin rests works as expected
-        if ( ! success ) {
-            LOG.warn( "Preteding start operation worked succesfully!" );
-            success = true;
-        }
 
 
         if ( success ) {

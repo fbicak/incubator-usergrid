@@ -1,6 +1,16 @@
 package org.apache.usergrid.chop.example.cassandra;
 
 
+import java.util.ArrayList;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.usergrid.chop.api.IterationChop;
 import org.apache.usergrid.chop.example.subutai.cassandra.CassandraClient;
 import org.apache.usergrid.chop.example.subutai.cassandra.RandomDataGenerator;
@@ -9,25 +19,13 @@ import org.apache.usergrid.chop.stack.ChopCluster;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
 import org.apache.usergrid.chop.stack.Instance;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
-import org.junit.runners.MethodSorters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-
-
-import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Metadata;
 
 import static junit.framework.TestCase.assertNotNull;
 
 
 @FixMethodOrder( MethodSorters.NAME_ASCENDING)
-@IterationChop( iterations = 10, threads = 1 )
+@IterationChop( iterations = 100, threads = 4 )
 public class CassandraClusterTest {
     private static final Logger LOG = LoggerFactory.getLogger( SimpleCassandraClient.class );
 
@@ -35,20 +33,18 @@ public class CassandraClusterTest {
     @ChopCluster( name = "TestCassandraCluster" )
     public static ICoordinatedCluster testCluster;
 
+    public CassandraClient client = new SimpleCassandraClient();
+    public RandomDataGenerator dataGenerator = new RandomDataGenerator( client );
+    private final int rowCount = 1000;
 
-    public static CassandraClient client = new SimpleCassandraClient();
-    public static RandomDataGenerator dataGenerator = new RandomDataGenerator( client );
 
-
-    @BeforeClass
-    public static void initConnection() {
+    @Before
+    public void initConnection() {
         if( testCluster == null ) {
             LOG.info( "Test cluster is null, skipping initConnection()" );
             return;
         }
-        String connectionIP = getIPList( testCluster ).get( 0 );
-        LOG.info( "Creating connection with {}", connectionIP );
-        client.connect( connectionIP );
+        client.connect( getIPList( testCluster ) );
     }
 
 
@@ -59,11 +55,9 @@ public class CassandraClusterTest {
             return;
         }
         assertNotNull( client.getSession() );
-        Metadata metadata = client.getCluster().getMetadata();
+        assertNotNull( client.getSession().getCluster() );
+        Metadata metadata = client.getSession().getCluster().getMetadata();
         assertNotNull( metadata );
-        for ( KeyspaceMetadata keyspaceMetadata : metadata.getKeyspaces() ) {
-            LOG.info( "Found keyspace: {}", keyspaceMetadata.getName() );
-        }
     }
 
 
@@ -75,18 +69,16 @@ public class CassandraClusterTest {
         }
         dataGenerator.createTestKeyspaceIfNotExists();
         dataGenerator.createTestTablesIfNotExists();
-        dataGenerator.generateRandomData( 1000 );
+        dataGenerator.generateRandomData( rowCount );
     }
 
 
-    @AfterClass
-    public static void closeConnection() {
+    @After
+    public void closeConnection() {
         if( testCluster == null ) {
             LOG.info( "Test cluster is null, skipping closeConnection()" );
             return;
         }
-        String connectionIP = getIPList( testCluster ).get( 0 );
-        LOG.info( "Closing connection with {}", connectionIP );
         client.close();
     }
 
