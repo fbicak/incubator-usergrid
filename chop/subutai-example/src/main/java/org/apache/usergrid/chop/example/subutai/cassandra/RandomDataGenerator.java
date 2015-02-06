@@ -53,7 +53,6 @@ public class RandomDataGenerator {
     /**
      *
      * @param rowCount the number of rows to be written
-     * @return the number of successful write operations
      */
     public void generateRandomData( int rowCount ) {
         LOG.info( "Generating random data({}) on {} table", rowCount, TEST_TABLE_NAME );
