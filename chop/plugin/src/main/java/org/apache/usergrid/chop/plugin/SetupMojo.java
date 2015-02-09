@@ -29,6 +29,7 @@ import javax.ws.rs.core.Response;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProjectHelper;
 
 import org.apache.usergrid.chop.api.Project;
@@ -40,7 +41,8 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 
-@Mojo( name = "setup" )
+@Mojo( name = "setup", requiresDependencyResolution = ResolutionScope.TEST,
+        requiresDependencyCollection = ResolutionScope.TEST )
 public class SetupMojo extends MainMojo {
 
     @Component
