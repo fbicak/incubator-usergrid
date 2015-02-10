@@ -3,6 +3,7 @@
     "id" : "adb51dfa-ed4f-4a36-9cbf-6b5a7b6da31e",
     "clusters" : [ {
         "name" : "TestCassandraCluster",
+        "configuratorPlugin" : "cassandra",
         "instanceSpec" : {
             "imageId" : "cassandra",
             "type" : "m1.large",
