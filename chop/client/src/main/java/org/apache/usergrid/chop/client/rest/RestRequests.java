@@ -28,6 +28,8 @@ import org.apache.usergrid.chop.api.RestParams;
 import org.apache.usergrid.chop.api.Result;
 import org.apache.usergrid.chop.api.Runner;
 import org.apache.usergrid.chop.api.StatsSnapshot;
+
+import org.safehaus.subutai.common.settings.Common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,8 @@ public class RestRequests {
         javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
             new javax.net.ssl.HostnameVerifier() {
                 public boolean verify( String hostname, javax.net.ssl.SSLSession sslSession) {
-                    return hostname.equals( runner.getHostname() );
+                    return hostname.equals( runner.getHostname() ) || hostname.equals( runner.getHostname() + "." +
+                            Common.DEFAULT_DOMAIN_NAME );
                 }
             }
         );

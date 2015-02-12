@@ -60,7 +60,7 @@ public enum SetupStackState {
             "%s signal rejected. When NotSetUp only SETUP and DEPLOY signal(s) which cause to transition into " +
                     "SettingUp and NotSetUp state(s) respectively" ),
 
-    // SetupFailed ==> (setup deploy) ==> NotSetUp
+    // SetupFailed ==> (deploy signal) ==> NotSetUp
     // SetupFailed ==> (setup signal) ==> SettingUp
     SetupFailed( 2, new SetupStackSignal[] { SetupStackSignal.SETUP, SetupStackSignal.DEPLOY },
             new Integer[] { 1, 3 },

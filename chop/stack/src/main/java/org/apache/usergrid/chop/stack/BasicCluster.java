@@ -26,6 +26,7 @@ public class BasicCluster implements Cluster {
     private String name;
     private InstanceSpec instanceSpec = new BasicInstanceSpec();
     private int size;
+    private String configuratorPlugin;
 
 
     @Override
@@ -61,5 +62,15 @@ public class BasicCluster implements Cluster {
     public BasicCluster setSize( final int size ) {
         this.size = size;
         return this;
+    }
+
+
+    public String getConfiguratorPlugin() {
+        return configuratorPlugin;
+    }
+
+
+    public void setConfiguratorPlugin( final String configuratorPlugin ) {
+        this.configuratorPlugin = configuratorPlugin;
     }
 }

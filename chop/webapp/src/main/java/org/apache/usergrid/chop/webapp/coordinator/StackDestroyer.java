@@ -27,11 +27,15 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.usergrid.chop.api.ProviderParams;
 import org.apache.usergrid.chop.api.store.amazon.AmazonFig;
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiFig;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.spi.InstanceManager;
 import org.apache.usergrid.chop.stack.CoordinatedStack;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
 import org.apache.usergrid.chop.stack.Instance;
 import org.apache.usergrid.chop.stack.SetupStackSignal;
+import org.apache.usergrid.chop.webapp.ChopUiFig;
 import org.apache.usergrid.chop.webapp.dao.ProviderParamsDao;
 import org.apache.usergrid.chop.webapp.service.InjectorFactory;
 
@@ -44,6 +48,9 @@ public class StackDestroyer {
 
     @Inject
     private ProviderParamsDao providerParamsDao;
+
+    @Inject
+    private ChopUiFig chopUiFig;
 
     private CoordinatedStack stack;
 
@@ -60,13 +67,21 @@ public class StackDestroyer {
 
     public void destroy() {
         providerParamsDao = InjectorFactory.getInstance( ProviderParamsDao.class );
+        chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
 
         ProviderParams providerParams = providerParamsDao.getByUser( stack.getUser().getUsername() );
 
-        /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
-        AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
-        amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
-        amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( AmazonProvider.PROVIDER_NAME ) ) {
+            /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
+            AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
+            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
+            amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
+        }
+        else if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            SubutaiFig subutaiFig = InjectorFactory.getInstance( SubutaiFig.class );
+            subutaiFig.bypass( SubutaiFig.SUBUTAI_PEER_SITE, stack.getDataCenter() );
+        }
+
 
         InstanceManager instanceManager = InjectorFactory.getInstance( InstanceManager.class );
         instanceManager.setDataCenter( stack.getDataCenter() );

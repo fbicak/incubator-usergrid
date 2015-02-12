@@ -23,4 +23,5 @@ public interface SshValues {
     public String getHostname();
     public String getPublicIpAddress();
     public String getSshKeyFile();
+    public String getProviderName();
 }

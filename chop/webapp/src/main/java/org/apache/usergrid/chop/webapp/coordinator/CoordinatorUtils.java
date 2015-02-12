@@ -31,13 +31,16 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiInstanceValues;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.stack.Cluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.usergrid.chop.api.Constants;
 import org.apache.usergrid.chop.api.SshValues;
-import org.apache.usergrid.chop.api.store.amazon.InstanceValues;
+import org.apache.usergrid.chop.api.store.amazon.AmazonInstanceValues;
 import org.apache.usergrid.chop.client.ssh.AsyncSsh;
 import org.apache.usergrid.chop.client.ssh.Command;
 import org.apache.usergrid.chop.client.ssh.ResponseInfo;
@@ -50,14 +53,19 @@ import org.apache.usergrid.chop.stack.ICoordinatedCluster;
 import org.apache.usergrid.chop.stack.ICoordinatedStack;
 import org.apache.usergrid.chop.stack.Instance;
 import org.apache.usergrid.chop.stack.Stack;
+import org.apache.usergrid.chop.webapp.ChopUiFig;
+import org.apache.usergrid.chop.webapp.service.InjectorFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 
 
 public class CoordinatorUtils {
 
     private static final Logger LOG = LoggerFactory.getLogger( CoordinatorUtils.class );
 
+    @Inject
+    private static ChopUiFig chopUiFig;
 
     /**
      * Writes the given input stream to the given file location
@@ -224,8 +232,20 @@ public class CoordinatorUtils {
         LOG.info( "Starting the execution of setup scripts on cluster {}", cluster.getName() );
 
         // Prepare instance values
-        for( Instance instance: cluster.getInstances() ) {
-            sshValues.add( new InstanceValues( instance, keyFile ) );
+        chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
+
+        String username;
+        if ( chopUiFig.getServiceProvider().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+            for( Instance instance: cluster.getInstances() ) {
+                sshValues.add( new SubutaiInstanceValues( instance, keyFile ) );
+            }
+            username = Utils.SUBUTAI_USER;
+        }
+        else {
+            for( Instance instance: cluster.getInstances() ) {
+                sshValues.add( new AmazonInstanceValues( instance, keyFile ) );
+            }
+            username = Utils.DEFAULT_USER;
         }
 
         // Prepare setup environment variables
@@ -293,31 +313,32 @@ public class CoordinatorUtils {
             File fileToSave = new File( runnerJar.getParentFile(), file.getName() );
             writeToFile( getResourceAsStreamFromRunnerJar( runnerJar, file.getName() ), fileToSave.getPath() );
 
-                /** SCP the script to instance **/
-                sb = new StringBuilder();
-                sb.append( "/home/" )
-                  .append( Utils.DEFAULT_USER )
-                  .append( "/" )
-                  .append( fileToSave.getName() );
 
-                String destFile = sb.toString();
-                commands.add( new SCPCommand( fileToSave.getAbsolutePath(), destFile ) );
+            /** SCP the script to instance **/
+            sb = new StringBuilder();
+            sb.append( "/home/" )
+              .append( username )
+              .append( "/" )
+              .append( fileToSave.getName() );
 
-                /** calling chmod first just in case **/
-                sb = new StringBuilder();
-                sb.append( "chmod 0755 " )
-                  .append( "/home/" )
-                  .append( Utils.DEFAULT_USER )
-                  .append( "/" )
-                  .append( fileToSave.getName() )
-                  .append( ";" );
+            String destFile = sb.toString();
+            commands.add( new SCPCommand( fileToSave.getAbsolutePath(), destFile ) );
 
-                /** Run the script command */
-                sb.append( exportVars )
-                  .append( "sudo -E " )
-                  .append( destFile );
+            /** calling chmod first just in case **/
+            sb = new StringBuilder();
+            sb.append( "chmod 0755 " )
+              .append( "/home/" )
+              .append( username )
+              .append( "/" )
+              .append( fileToSave.getName() )
+              .append( ";" );
 
-                commands.add( new SSHCommand( sb.toString() ) );
+            /** Run the script command */
+            sb.append( exportVars )
+              .append( "sudo -E " )
+              .append( destFile );
+
+            commands.add( new SSHCommand( sb.toString() ) );
         }
 
         return executeSSHCommands( sshValues, commands );
@@ -340,13 +361,25 @@ public class CoordinatorUtils {
         LOG.info( "Deploying and starting runner.jar to runner instances of {}", stack.getName() );
 
         /** Prepare instance values */
-        for( Instance instance: stack.getRunnerInstances() ) {
-            sshValues.add( new InstanceValues( instance, keyFile ) );
+        chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
+        String username;
+
+        if ( chopUiFig.getServiceProvider().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+            for( Instance instance: stack.getRunnerInstances() ) {
+                sshValues.add( new SubutaiInstanceValues( instance, keyFile ) );
+            }
+            username = Utils.SUBUTAI_USER;
+        }
+        else {
+            for( Instance instance: stack.getRunnerInstances() ) {
+                sshValues.add( new AmazonInstanceValues( instance, keyFile ) );
+            }
+            username = Utils.DEFAULT_USER;
         }
 
         /** SCP the runner.jar to instance **/
         sb.append( "/home/" )
-          .append( Utils.DEFAULT_USER )
+          .append( username )
           .append( "/" )
           .append( runnerJar.getName() );
 
@@ -382,7 +415,7 @@ public class CoordinatorUtils {
                 /** SCP the script to instance **/
                 sb = new StringBuilder();
                 sb.append( "/home/" )
-                        .append( Utils.DEFAULT_USER )
+                        .append( username )
                         .append( "/" )
                         .append( fileToSave.getName() );
 
@@ -393,7 +426,7 @@ public class CoordinatorUtils {
                 sb = new StringBuilder();
                 sb.append( "chmod 0755 " )
                         .append( "/home/" )
-                        .append( Utils.DEFAULT_USER )
+                        .append( username )
                         .append( "/" )
                         .append( fileToSave.getName() )
                         .append( ";" );
@@ -414,10 +447,17 @@ public class CoordinatorUtils {
          * This assumes an appropriate java is existing at /usr/bin/java on given instances,
          * so imageId for runners should be selected accordingly.
          */
+        chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
+
+
         sb = new StringBuilder();
         sb.append( "sudo su -c \"nohup /usr/bin/java -Darchaius.deployment.environment=CHOP -jar " )
-          .append( destFile )
-          .append( " > /var/log/chop-runner.log 2>&1 &\"" );
+          .append( destFile );
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            sb.append( " -p " + SubutaiProvider.PROVIDER_NAME );
+            LOG.info( "Configuring runners according to " + chopUiFig.getServiceProvider() + " provider..." );
+        }
+        sb.append( " > /var/log/chop-runner.log 2>&1 &\"" );
 
         commands.add( new SSHCommand( sb.toString() ) );
 

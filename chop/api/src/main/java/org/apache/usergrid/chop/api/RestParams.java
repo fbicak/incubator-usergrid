@@ -42,4 +42,8 @@ public interface RestParams {
     String TEST_PACKAGE = "testPackageBase";
     String MD5 = "md5";
     String RUNNER_COUNT = "runnerCount";
+    String ENVIRONMENT_TOPOLOGY = "topology";
+    String NODE_GROUP = "nodeGroup";
+    String ENVIRONMENT_ID = "environmentId";
+    String INSTANCE_ID = "containerId";
 }

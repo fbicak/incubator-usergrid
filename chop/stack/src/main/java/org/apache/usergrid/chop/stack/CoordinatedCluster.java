@@ -36,11 +36,13 @@ public class CoordinatedCluster implements ICoordinatedCluster {
 
     private final Cluster delegate;
     private final Set<Instance> instances;
+    private String configuratorPlugin;
 
 
     CoordinatedCluster( Cluster cluster ) {
         instances = new HashSet<Instance>( cluster.getSize() );
         delegate = cluster;
+        configuratorPlugin = cluster.getConfiguratorPlugin();
     }
 
 
@@ -59,6 +61,17 @@ public class CoordinatedCluster implements ICoordinatedCluster {
     @Override
     public int getSize() {
         return delegate.getSize();
+    }
+
+
+    @Override
+    public String getConfiguratorPlugin() {
+        return configuratorPlugin;
+    }
+
+
+    public void setConfiguratorPlugin( final String configuratorPlugin ) {
+        this.configuratorPlugin = configuratorPlugin;
     }
 
 

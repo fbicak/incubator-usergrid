@@ -210,9 +210,9 @@ public class RunManagerResource extends TestableResource implements RestParams {
 
         // Here is the list of BasicRunResults
         JSONArray runResults = ( JSONArray ) object.get( "runResults" );
-        Iterator<JSONObject> iterator = runResults.iterator();
-        while( iterator.hasNext() ) {
-            JSONObject jsonResult = iterator.next();
+
+        for ( int i = 0; i < runResults.size(); i++ ) {
+            JSONObject jsonResult = (JSONObject) runResults.get( i );
 
             int failureCount = Util.getInt( jsonResult, "failureCount" );
             BasicRunResult runResult = new BasicRunResult(
@@ -224,12 +224,11 @@ public class RunManagerResource extends TestableResource implements RestParams {
             );
             if( failureCount != 0 ) {
                 try {
-                    for( Object result : runResults ) {
-                        JSONObject failures = ( JSONObject ) result;
-                        JSONArray obj = ( JSONArray ) failures.get( "failures" );
-                        runResult.setFailures( obj.toJSONString() );
-                        LOG.info( "Saving run results into Elastic Search." );
-                    }
+                    Object result = runResults.get( i );
+                    JSONObject failures = ( JSONObject ) result;
+                    JSONArray obj = ( JSONArray ) failures.get( "failures" );
+                    runResult.setFailures( obj.toJSONString() );
+                    LOG.info( "Saving run results into Elastic Search." );
                 }catch ( Exception e ){
                     LOG.warn( "Could not serialize runResults JSON object", e );
                 }

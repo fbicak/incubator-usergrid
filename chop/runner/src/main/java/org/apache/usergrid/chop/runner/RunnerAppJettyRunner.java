@@ -26,6 +26,14 @@ import org.safehaus.jettyjam.utils.JettyConnectors;
 import org.safehaus.jettyjam.utils.JettyContext;
 import org.safehaus.jettyjam.utils.JettyRunner;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.MissingArgumentException;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
+
 import com.google.inject.servlet.GuiceFilter;
 
 
@@ -45,6 +53,8 @@ import com.google.inject.servlet.GuiceFilter;
 public class RunnerAppJettyRunner extends JettyRunner {
     private static RunnerAppJettyRunner instance;
 
+    private static CommandLine cl;
+
 
     protected RunnerAppJettyRunner() {
         super( RunnerAppJettyRunner.class.getSimpleName() );
@@ -62,8 +72,52 @@ public class RunnerAppJettyRunner extends JettyRunner {
     }
 
 
+
     public static void main( String[] args ) throws Exception {
+        processCli(args);
         RunnerAppJettyRunner launcher = new RunnerAppJettyRunner();
         launcher.start();
+    }
+
+
+    public static CommandLine getCommandLine() {
+        return cl;
+    }
+
+
+    static void processCli(String[] args) {
+        CommandLineParser parser = new PosixParser();
+        Options options = getOptions();
+
+        try {
+            cl = parser.parse(options, args);
+        } catch (ParseException e) {
+            if (e instanceof MissingArgumentException) {
+                System.out.println("Missing option: " + ((MissingArgumentException) e).getOption());
+            }
+
+            help(options);
+            System.exit(1);
+        }
+
+        if (cl.hasOption('h')) {
+            help(options);
+            System.exit(0);
+        }
+    }
+
+
+    static void help(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("ChopRunner", options);
+    }
+
+    static Options getOptions() {
+        Options options = new Options();
+
+        options.addOption( "h", "help", false, "Print out help." );
+        options.addOption( "p", "service-provider", true, "Overrides the service provider(AWS by default)" );
+
+        return options;
     }
 }

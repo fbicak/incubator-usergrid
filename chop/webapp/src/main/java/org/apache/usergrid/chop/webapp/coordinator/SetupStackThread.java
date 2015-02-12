@@ -30,6 +30,9 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import org.apache.usergrid.chop.api.ProviderParams;
 import org.apache.usergrid.chop.api.store.amazon.AmazonFig;
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiFig;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.spi.InstanceManager;
 import org.apache.usergrid.chop.spi.IpRuleManager;
 import org.apache.usergrid.chop.spi.LaunchResult;
@@ -87,17 +90,25 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         ProviderParams providerParams = providerParamsDao.getByUser( stack.getUser().getUsername() );
 
         /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
-        AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
-        amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
-        amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( AmazonProvider.PROVIDER_NAME ) ) {
+            AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
+            amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
+            amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
+
+            IpRuleManager ipRuleManager = InjectorFactory.getInstance( IpRuleManager.class );
+            ipRuleManager.setDataCenter( stack.getDataCenter() );
+            ipRuleManager.applyIpRuleSet( stack.getIpRuleSet() );
+        }
+        else if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            SubutaiFig subutaiFig = InjectorFactory.getInstance( SubutaiFig.class );
+            subutaiFig.bypass( SubutaiFig.SUBUTAI_PEER_SITE, stack.getDataCenter() );
+        }
 
         InstanceManager instanceManager = InjectorFactory.getInstance( InstanceManager.class );
-        IpRuleManager ipRuleManager = InjectorFactory.getInstance( IpRuleManager.class );
 
         File runnerJar = CoordinatorUtils.getRunnerJar( chopUiFig.getContextPath(), stack );
 
-        ipRuleManager.setDataCenter( stack.getDataCenter() );
-        ipRuleManager.applyIpRuleSet( stack.getIpRuleSet() );
+
 
         /** Setup clusters */
         for ( ICoordinatedCluster cluster : stack.getClusters() ) {
@@ -121,12 +132,22 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
                 return null;
             }
 
-            LaunchResult result = instanceManager.launchCluster( stack, cluster,
-                    chopUiFig.getLaunchClusterTimeout() );
+            LaunchResult result = instanceManager.launchCluster( stack, cluster, chopUiFig.getLaunchClusterTimeout() );
 
             for ( Instance instance : result.getInstances() ) {
                 launchedInstances.add( instance.getId() );
                 cluster.add( instance );
+            }
+
+            // Check if all instances are created for the cluster
+            if ( cluster.getInstances().size() != cluster.getSize() ) {
+                LOG.error( String.format( "%s number of instances are created for %s cluster out of %s." +
+                                " Aborting and terminating launched instances...!",
+                        cluster.getInstances().size(), cluster.getName(), cluster.getSize() ) );
+                instanceManager.terminateInstances( launchedInstances );
+                stack.setSetupState( SetupStackSignal.FAIL );
+                stack.notifyAll();
+                return null;
             }
 
             /** Setup system properties, deploy the scripts and execute them on cluster instances */
@@ -160,7 +181,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         }
         if ( ! ( new File( keyFile ) ).exists() ) {
             errorMessage = "Key file " + keyFile + " for runners not found";
-            LOG.warn( errorMessage + ", aborting and terminating launched instances..." );
+            LOG.warn( errorMessage + ", aborting and terminating launched instances if not terminated already..." );
             instanceManager.terminateInstances( launchedInstances );
             stack.setSetupState( SetupStackSignal.FAIL );
             stack.notifyAll();
@@ -171,14 +192,22 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         runnerSpec.setType( providerParams.getInstanceType() );
         runnerSpec.setKeyName( providerParams.getKeyName() );
 
-        LaunchResult result = instanceManager.launchRunners( stack, runnerSpec,
-                chopUiFig.getLaunchClusterTimeout() );
+        LaunchResult result = instanceManager.launchRunners( stack, runnerSpec, chopUiFig.getLaunchClusterTimeout() );
 
         for ( Instance instance : result.getInstances() ) {
             launchedInstances.add( instance.getId() );
             stack.addRunnerInstance( instance );
         }
 
+        if ( stack.getRunnerInstances().size() != stack.getRunnerCount() ) {
+            LOG.error( String.format( "%s number of runner instances are created for %s stack out of %s." +
+                            " Aborting and terminating launched instances if not terminated already...",
+                    stack.getRunnerInstances().size(), stack.getName(), stack.getRunnerCount() ) );
+            instanceManager.terminateInstances( launchedInstances );
+            stack.setSetupState( SetupStackSignal.FAIL );
+            stack.notifyAll();
+            return null;
+        }
         /** Deploy and start runner.jar on instances */
         boolean success = false;
         try {

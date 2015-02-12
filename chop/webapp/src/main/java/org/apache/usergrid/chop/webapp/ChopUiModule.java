@@ -25,6 +25,9 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.shiro.guice.web.ShiroWebModule;
 import org.apache.usergrid.chop.api.Project;
 import org.apache.usergrid.chop.api.store.amazon.AmazonModule;
+import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiModule;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.webapp.coordinator.RunnerCoordinator;
 import org.apache.usergrid.chop.webapp.coordinator.rest.*;
 import org.apache.usergrid.chop.webapp.elasticsearch.ElasticSearchClient;
@@ -45,7 +48,7 @@ import java.util.Map;
 public class ChopUiModule extends ServletModule {
 
     public static final String PACKAGES_KEY = "com.sun.jersey.config.property.packages";
-
+    private String providerName;
     static {
         try {
             ConfigurationManager.loadCascadedPropertiesFromResources( "chop-ui" );
@@ -55,9 +58,21 @@ public class ChopUiModule extends ServletModule {
         }
     }
 
+
+    public ChopUiModule( final String providerName )
+    {
+        this.providerName = providerName;
+    }
+
+
     protected void configureServlets() {
         install( new GuicyFigModule( ChopUiFig.class, Project.class, RestFig.class, ElasticSearchFig.class ) );
-        install( new AmazonModule() );
+        if ( providerName.equals( AmazonProvider.PROVIDER_NAME ) ) {
+            install( new AmazonModule() );
+        }
+        else if ( providerName.equals( SubutaiProvider.PROVIDER_NAME ) ) {
+            install( new SubutaiModule() );
+        }
 
         // Hook Jersey into Guice Servlet
         bind( GuiceContainer.class );
@@ -82,5 +97,10 @@ public class ChopUiModule extends ServletModule {
         Map<String, String> params = new HashMap<String, String>();
         params.put( PACKAGES_KEY, getClass().getPackage().toString() );
         serve( "/*" ).with( GuiceContainer.class, params );
+    }
+
+    public String getProviderName()
+    {
+        return providerName;
     }
 }
