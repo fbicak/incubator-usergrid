@@ -46,4 +46,5 @@ public interface RestParams {
     String NODE_GROUP = "nodeGroup";
     String ENVIRONMENT_ID = "environmentId";
     String INSTANCE_ID = "containerId";
+    String SSH_KEY = "key";
 }
