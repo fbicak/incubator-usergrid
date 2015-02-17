@@ -25,6 +25,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
+import com.sun.jersey.api.representation.Form;
 import com.sun.jersey.api.uri.UriComponent;
 import org.apache.usergrid.chop.api.RestParams;
 import org.apache.usergrid.chop.stack.Cluster;
@@ -88,12 +89,16 @@ public class SubutaiClient
         // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
 
-        String topologyEncoded = UriComponent.encode( gson.toJson( topology ), UriComponent.Type.QUERY_PARAM );
         // Returns the uuid of the environment created from the supplied topology
-        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.ENVIRONMENT_TOPOLOGY, topologyEncoded )
-                                                          .type( MediaType.APPLICATION_JSON )
-                                                          .post( ClientResponse.class );
+        Form environmentCreateForm = new Form();
+        environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
+        // TODO set the environment ssh key when it works on Subutai
+        environmentCreateForm.add( RestParams.SSH_KEY, gson.toJson( null ) );
+        environmentCreateForm.add( RestParams.SSH_KEY, "{}" );
 
+        ClientResponse environmentBuildResponse = resource.type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
+                                                          .accept( MediaType.APPLICATION_JSON )
+                                                          .post( ClientResponse.class, environmentCreateForm );
 
         if ( environmentBuildResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
             LOG.error( "Environment build operation for {} stack is not successful! Error: {}", stack.getName(),
@@ -203,15 +208,17 @@ public class SubutaiClient
         // Send a request to add the nodegroup the specified environment
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
-        String runnerTopologyEncoded = UriComponent.encode( gson.toJson( runnerTopology ), UriComponent.Type.QUERY_PARAM );
+
+        Form addContainerToExistingEnvironmentForm = new Form();
+        addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_ID, environmentId.toString() );
+        addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( runnerTopology ) );
+        // TODO set the environment ssh key when it works on Subutai
+        addContainerToExistingEnvironmentForm.add( RestParams.SSH_KEY, null );
 
         ClientResponse addNodeGroupResponse = resource.path( "/grow" )
-                                                      .queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
-                                                      .queryParam( RestParams.ENVIRONMENT_TOPOLOGY, runnerTopologyEncoded )
-                                                      .type( MediaType.TEXT_HTML_TYPE )
-//                                                      .accept( MediaType.APPLICATION_JSON )
-                                                      .post( ClientResponse.class );
-
+                                                          .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
+                                                          .accept( MediaType.APPLICATION_JSON )
+                                                          .post( ClientResponse.class, addContainerToExistingEnvironmentForm );
 
         String responseMessage = addNodeGroupResponse.getEntity( String.class );
         LOG.debug( "Response of add node group rest call: {}", responseMessage );
