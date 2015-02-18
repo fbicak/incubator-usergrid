@@ -139,7 +139,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
                 String publicKeyFileName = SubutaiUtils.getPublicKeyFileName( cluster.getInstanceSpec().getKeyName() );
                 publicKeyFilePath = providerParams.getKeys().get( publicKeyFileName );
                 if ( publicKeyFilePath == null ) {
-                    errorMessage = "No key found with name " + cluster.getInstanceSpec().getKeyName() +
+                    errorMessage = "No key found with name " + publicKeyFileName +
                             " for cluster " + cluster.getName();
                     LOG.warn( errorMessage + ", aborting and terminating launched instances..." );
                     instanceManager.terminateInstances( launchedInstances );
