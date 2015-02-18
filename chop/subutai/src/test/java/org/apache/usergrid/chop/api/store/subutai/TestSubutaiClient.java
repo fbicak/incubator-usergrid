@@ -154,7 +154,7 @@ public class TestSubutaiClient
         mockClusterEnvironmentJson = new EnvironmentJson( environmentId, stack.getName(),
                 EnvironmentStatus.HEALTHY, clusterContainers );
 
-        /**  */
+        /** Create a temporary key file necessary for creating environment on Subutai */
         String publicKeyFileName = SubutaiUtils.getPublicKeyFileName( cluster.getInstanceSpec().getKeyName() );
         File file = folder.newFile( publicKeyFileName );
         publicKeyFile = file;
