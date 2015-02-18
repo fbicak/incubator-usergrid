@@ -234,7 +234,6 @@ public class SubutaiClient
         Form addContainerToExistingEnvironmentForm = new Form();
         addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_ID, environmentId.toString() );
         addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( runnerTopology ) );
-        // TODO set the environment ssh key when it works on Subutai
         addContainerToExistingEnvironmentForm.add( RestParams.SSH_KEY, null );
 
         ClientResponse addNodeGroupResponse = resource.path( "/grow" )
