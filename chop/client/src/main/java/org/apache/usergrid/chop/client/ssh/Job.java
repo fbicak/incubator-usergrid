@@ -119,14 +119,12 @@ public class Job implements Callable<ResponseInfo> {
         // try to open ssh session
         String userName = Utils.SUBUTAI_USER;
         try {
-            // TODO is this really necessary??
-//            Thread.sleep( 30000 );
             ssh = new JSch();
-            // TODO replace password with ssh key file as you see below when Subutai has key management
-//            ssh.addIdentity( value.getSshKeyFile() );
+            ssh.addIdentity( value.getSshKeyFile() );
             session = ssh.getSession( userName, value.getPublicIpAddress() );
             session.setConfig( "StrictHostKeyChecking", "no" );
-            session.setPassword( "ubuntu" );
+            // TODO remove this when default non-root user can execute sudo commands without password in Subutai
+//            session.setPassword( "ubuntu" );
             session.connect();
         }
         catch ( Exception e ) {
@@ -163,16 +161,18 @@ public class Job implements Callable<ResponseInfo> {
         String message;
         try {
             channel = session.openChannel( "exec" );
-            // Append "sudo -S -p '' echo" so that if sudo asks for password, eliminate password prompt
-            // by doing it in the beginning
-            if ( value.getProviderName().equals( SubutaiProvider.PROVIDER_NAME ) ) {
-                ( ( ChannelExec ) channel ).setCommand( "echo " + Utils.DEFAULT_SUBUTAI_PASSWORD
-                        + " | sudo -S -p '' echo > /dev/null && "
-                        + command.getCommand() );
-            }
-            else {
-                ( ( ChannelExec ) channel ).setCommand( command.getCommand() );
-            }
+            // TODO remove this commented block when default non-root user can execute sudo commands without password in Subutai
+////            Append "sudo -S -p '' echo" so that if sudo asks for password, eliminate password prompt
+////            by doing it in the beginning
+//            if ( value.getProviderName().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+//                ( ( ChannelExec ) channel ).setCommand( "echo " + Utils.DEFAULT_SUBUTAI_PASSWORD
+//                        + " | sudo -S -p '' echo > /dev/null && "
+//                        + command.getCommand() );
+//            }
+//            else {
+//                ( ( ChannelExec ) channel ).setCommand( command.getCommand() );
+//            }
+            ( ( ChannelExec ) channel ).setCommand( command.getCommand() );
             channel.connect();
 
             BufferedReader inputReader = new BufferedReader( new InputStreamReader( channel.getInputStream() ) );

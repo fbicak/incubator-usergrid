@@ -26,8 +26,9 @@ import java.io.InputStream;
 public class Utils {
 
     public static final String DEFAULT_USER = "ubuntu";
-    public static final String SUBUTAI_USER = "subutai";
-    public static final String DEFAULT_SUBUTAI_PASSWORD = "ubuntu";
+    public static final String SUBUTAI_USER = "root";
+    // TODO remove this when default non-root user can execute sudo commands without password in Subutai
+    //    public static final String DEFAULT_SUBUTAI_PASSWORD = "ubuntu";
 
 
     public static String checkAck( InputStream in ) throws IOException {
