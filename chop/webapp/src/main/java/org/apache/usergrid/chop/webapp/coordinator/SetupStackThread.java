@@ -33,6 +33,7 @@ import org.apache.usergrid.chop.api.store.amazon.AmazonFig;
 import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiFig;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
+import org.apache.usergrid.chop.api.store.subutai.SubutaiUtils;
 import org.apache.usergrid.chop.spi.InstanceManager;
 import org.apache.usergrid.chop.spi.IpRuleManager;
 import org.apache.usergrid.chop.spi.LaunchResult;
@@ -132,7 +133,33 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
                 return null;
             }
 
-            LaunchResult result = instanceManager.launchCluster( stack, cluster, chopUiFig.getLaunchClusterTimeout() );
+            String publicKeyFilePath = null;
+
+            if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+                String publicKeyFileName = SubutaiUtils.getPublicKeyFileName( cluster.getInstanceSpec().getKeyName() );
+                publicKeyFilePath = providerParams.getKeys().get( publicKeyFileName );
+                if ( publicKeyFilePath == null ) {
+                    errorMessage = "No key found with name " + cluster.getInstanceSpec().getKeyName() +
+                            " for cluster " + cluster.getName();
+                    LOG.warn( errorMessage + ", aborting and terminating launched instances..." );
+                    instanceManager.terminateInstances( launchedInstances );
+                    stack.setSetupState( SetupStackSignal.FAIL );
+                    stack.notifyAll();
+                    return null;
+                }
+                if ( !( new File( publicKeyFilePath ) ).exists() ) {
+                    errorMessage = "Public Key file " + publicKeyFilePath + " for cluster "
+                            + cluster.getName() + " not found";
+                    LOG.warn( errorMessage + ", aborting and terminating launched instances..." );
+                    instanceManager.terminateInstances( launchedInstances );
+                    stack.setSetupState( SetupStackSignal.FAIL );
+                    stack.notifyAll();
+                    return null;
+                }
+            }
+
+            LaunchResult result = instanceManager.launchCluster( stack, cluster,
+                    chopUiFig.getLaunchClusterTimeout(), publicKeyFilePath );
 
             for ( Instance instance : result.getInstances() ) {
                 launchedInstances.add( instance.getId() );

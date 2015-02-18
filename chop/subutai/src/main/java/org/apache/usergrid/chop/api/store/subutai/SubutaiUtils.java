@@ -122,4 +122,7 @@ public class SubutaiUtils
     }
 
 
+    public static String getPublicKeyFileName( String privateKeyName ) {
+        return privateKeyName + ".pub";
+    }
 }

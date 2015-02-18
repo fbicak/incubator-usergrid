@@ -20,6 +20,7 @@
 package org.apache.usergrid.chop.api.store.subutai;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runners.MethodSorters;
 import org.safehaus.subutai.common.environment.EnvironmentStatus;
 import org.safehaus.subutai.common.host.ContainerHostState;
@@ -69,6 +71,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -80,6 +83,7 @@ public class TestSubutaiClient
     private static SubutaiFig subutaiFig;
     private static SubutaiInstanceManager subutaiInstanceManager;
     private static SubutaiClient subutaiClient;
+    private static File publicKeyFile;
 
     private static CoordinatedStack stack;
     private static EnvironmentJson environmentJson;
@@ -90,12 +94,15 @@ public class TestSubutaiClient
     private static Commit commit = mock( Commit.class );
     private static Module module = mock( Module.class );
 
+
     private static final int RUNNER_COUNT = 2;
     private static final int TEST_PORT = 8089;
 
     @ClassRule
     public static WireMockRule wireMockRule = new WireMockRule( TEST_PORT );
 
+    @ClassRule
+    public static TemporaryFolder folder = new TemporaryFolder();
 
     @BeforeClass
     public static void init() throws IOException
@@ -147,23 +154,19 @@ public class TestSubutaiClient
         mockClusterEnvironmentJson = new EnvironmentJson( environmentId, stack.getName(),
                 EnvironmentStatus.HEALTHY, clusterContainers );
 
-
+        /**  */
+        String publicKeyFileName = SubutaiUtils.getPublicKeyFileName( cluster.getInstanceSpec().getKeyName() );
+        File file = folder.newFile( publicKeyFileName );
+        publicKeyFile = file;
         // Stub rest endpoints
         // Build environment by blueprint
-        stubFor( post( urlPathEqualTo( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT ) )
-                        .withQueryParam( RestParams.ENVIRONMENT_TOPOLOGY, notMatching( "" ) ).willReturn(
-                                aResponse().withStatus( 200 ).withBody(
-                                        new Gson().toJson( mockClusterEnvironmentJson ) ) ) );
+        stubFor( post( urlPathEqualTo( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT ) ).willReturn(
+                        aResponse().withStatus( 200 ).withBody( new Gson().toJson( mockClusterEnvironmentJson ) ) ) );
 
         // Add new clusterContainers to an existing environment by topology
         stubFor( post( urlPathEqualTo( SubutaiClient.ENVIRONMENT_BASE_ENDPOINT + "/grow" ) )
-                        .withQueryParam( RestParams.ENVIRONMENT_ID, notMatching( "" ) )
-                        .withQueryParam( RestParams.ENVIRONMENT_TOPOLOGY, notMatching( "" ) )
-                        .willReturn( aResponse()
-                                        .withStatus( 200 )
-                                        .withBody( new Gson().toJson( runnerContainers ) )
-                                   )
-               );
+                        .willReturn( aResponse().withStatus( 200 ).withBody( new Gson().toJson( runnerContainers ) )
+                                   ) );
 
         // Configure cluster
         stubFor( post( urlMatching( SubutaiClient.CASSANDRA_PLUGIN_CONFIGURE_ENDPOINT
@@ -246,7 +249,7 @@ public class TestSubutaiClient
 
     @Test
     public void test001_createStackEnvironment() {
-        environmentJson = subutaiClient.createStackEnvironment( stack );
+        environmentJson = subutaiClient.createStackEnvironment( stack, publicKeyFile );
         assertNotNull( environmentJson );
         for ( ContainerJson containerJson : environmentJson.getContainers() ) {
             stack.getClusters().get( 0 ).add( SubutaiUtils.getInstanceFromContainer( containerJson ) );
@@ -321,7 +324,7 @@ public class TestSubutaiClient
     @Test
     public void test009_launchCluster() {
         ICoordinatedCluster cluster = stack.getClusters().get( 0 );
-        LaunchResult launchResult = subutaiInstanceManager.launchCluster( stack, cluster, 300 );
+        LaunchResult launchResult = subutaiInstanceManager.launchCluster( stack, cluster, 300, publicKeyFile.getAbsolutePath() );
         assertEquals( launchResult.getCount(), cluster.getSize() );
     }
 
@@ -358,5 +361,21 @@ public class TestSubutaiClient
             terminateIds.add( runnerInstance.getId() );
         }
         subutaiInstanceManager.terminateInstances( terminateIds );
+    }
+
+
+    @Test
+    public void test013_createStackEnvironmentWithoutPublicKey() {
+        environmentJson = subutaiClient.createStackEnvironment( stack, null );
+        assertNull( environmentJson );
+    }
+
+
+    @Test
+    public void test014_launchClusterWithoutPublicKey() {
+        ICoordinatedCluster cluster = stack.getClusters().get( 0 );
+        LaunchResult launchResult = subutaiInstanceManager.launchCluster( stack, cluster, 300,
+                publicKeyFile.getAbsolutePath() + "some-dummy-file-name" );
+        assertEquals( launchResult.getCount(), 0 );
     }
 }
