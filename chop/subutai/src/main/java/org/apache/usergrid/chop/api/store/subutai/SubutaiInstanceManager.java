@@ -32,6 +32,7 @@ import org.safehaus.subutai.core.env.rest.EnvironmentJson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -141,14 +142,23 @@ public class SubutaiInstanceManager implements InstanceManager
 
     @Override
     public LaunchResult launchCluster( final ICoordinatedStack stack, final ICoordinatedCluster cluster,
-                                       final int timeout )
+                                       final int timeout, final String publicKeyFilePath )
     {
         LOG.info( "Creating the cluster instances on {}", stack.getDataCenter() );
 
         List<String> instanceIds = new ArrayList<String>( cluster.getSize() );
         Collection<Instance> instances = new ArrayList<Instance>();
         // Create the environment
-        EnvironmentJson environment = subutaiClient.createStackEnvironment( stack );
+        if ( publicKeyFilePath == null ) {
+            LOG.error( "Public key file path cannot be null!" );
+            return new SubutaiLaunchResult( cluster.getInstanceSpec(), Collections.EMPTY_LIST );
+        }
+        File publicKeyFile = new File( publicKeyFilePath );
+        if ( ! publicKeyFile.exists() ) {
+            LOG.error( "Public key {} does not exists!", publicKeyFilePath );
+            return new SubutaiLaunchResult( cluster.getInstanceSpec(), Collections.EMPTY_LIST );
+        }
+        EnvironmentJson environment = subutaiClient.createStackEnvironment( stack, publicKeyFile );
 
         if ( environment == null ) {
             LOG.error( "Could not create environment for {} stack!", stack.getName() );

@@ -228,6 +228,7 @@ public class CoordinatorUtils {
         Collection<SshValues> sshValues = new HashSet<SshValues>( cluster.getSize() );
         StringBuilder sb = new StringBuilder();
         Collection<Command> commands = new ArrayList<Command>();
+        String userHomeDirectory;
 
         LOG.info( "Starting the execution of setup scripts on cluster {}", cluster.getName() );
 
@@ -246,6 +247,13 @@ public class CoordinatorUtils {
                 sshValues.add( new AmazonInstanceValues( instance, keyFile ) );
             }
             username = Utils.DEFAULT_USER;
+        }
+
+        if ( username.equals( "root" ) ) {
+            userHomeDirectory = "/root";
+        }
+        else {
+            userHomeDirectory = "/home/" + username;
         }
 
         // Prepare setup environment variables
@@ -316,8 +324,7 @@ public class CoordinatorUtils {
 
             /** SCP the script to instance **/
             sb = new StringBuilder();
-            sb.append( "/home/" )
-              .append( username )
+            sb.append( userHomeDirectory )
               .append( "/" )
               .append( fileToSave.getName() );
 
@@ -327,8 +334,7 @@ public class CoordinatorUtils {
             /** calling chmod first just in case **/
             sb = new StringBuilder();
             sb.append( "chmod 0755 " )
-              .append( "/home/" )
-              .append( username )
+              .append( userHomeDirectory )
               .append( "/" )
               .append( fileToSave.getName() )
               .append( ";" );
@@ -357,6 +363,7 @@ public class CoordinatorUtils {
         Collection<SshValues> sshValues = new HashSet<SshValues>( stack.getRunnerCount() );
         StringBuilder sb = new StringBuilder();
         Collection<Command> commands = new ArrayList<Command>();
+        String userHomeDirectory;
 
         LOG.info( "Deploying and starting runner.jar to runner instances of {}", stack.getName() );
 
@@ -377,9 +384,15 @@ public class CoordinatorUtils {
             username = Utils.DEFAULT_USER;
         }
 
+        if ( username.equals( "root" ) ) {
+            userHomeDirectory = "/root";
+        }
+        else {
+            userHomeDirectory = "/home/" + username;
+        }
+
         /** SCP the runner.jar to instance **/
-        sb.append( "/home/" )
-          .append( username )
+        sb.append( userHomeDirectory )
           .append( "/" )
           .append( runnerJar.getName() );
 
@@ -414,10 +427,9 @@ public class CoordinatorUtils {
 
                 /** SCP the script to instance **/
                 sb = new StringBuilder();
-                sb.append( "/home/" )
-                        .append( username )
-                        .append( "/" )
-                        .append( fileToSave.getName() );
+                sb.append( userHomeDirectory )
+                  .append( "/" )
+                  .append( fileToSave.getName() );
 
                 String destinationFile = sb.toString();
                 commands.add( new SCPCommand( fileToSave.getAbsolutePath(), destinationFile ) );
@@ -425,8 +437,7 @@ public class CoordinatorUtils {
                 /** calling chmod first just in case **/
                 sb = new StringBuilder();
                 sb.append( "chmod 0755 " )
-                        .append( "/home/" )
-                        .append( username )
+                        .append( userHomeDirectory )
                         .append( "/" )
                         .append( fileToSave.getName() )
                         .append( ";" );

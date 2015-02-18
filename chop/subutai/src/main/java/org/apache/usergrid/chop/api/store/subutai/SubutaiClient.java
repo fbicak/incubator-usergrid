@@ -26,7 +26,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.representation.Form;
-import com.sun.jersey.api.uri.UriComponent;
 import org.apache.usergrid.chop.api.RestParams;
 import org.apache.usergrid.chop.stack.Cluster;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
@@ -44,7 +43,12 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Type;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -82,7 +86,27 @@ public class SubutaiClient
      * @param stack used to create an environment on Subutai
      * @return the environment created for the given stack
      */
-    public EnvironmentJson createStackEnvironment( final ICoordinatedStack stack ) {
+    public EnvironmentJson createStackEnvironment( final ICoordinatedStack stack, File publicKeyFile ) {
+
+        String publicKeyFileContent;
+        if( publicKeyFile == null  ) {
+            LOG.error( "File cannot be null! Aborting.." );
+            return null;
+        }
+        if ( ! publicKeyFile.exists() ) {
+            LOG.error( "File {} does not exist! Aborting..", publicKeyFile );
+            return null;
+        }
+
+        try {
+            byte[] encoded = Files.readAllBytes( Paths.get( publicKeyFile.getAbsolutePath() ) );
+            publicKeyFileContent = new String( encoded );
+        }
+        catch ( IOException e ) {
+            LOG.error( "Could not read file {}! Error: {}", publicKeyFile.getAbsoluteFile(), e.getMessage() );
+            return null;
+        }
+
         // Create the topology from the supplied stack
         TopologyJson topology = getTopologyFromStack( stack );
 
@@ -92,9 +116,7 @@ public class SubutaiClient
         // Returns the uuid of the environment created from the supplied topology
         Form environmentCreateForm = new Form();
         environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
-        // TODO set the environment ssh key when it works on Subutai
-        environmentCreateForm.add( RestParams.SSH_KEY, gson.toJson( null ) );
-        environmentCreateForm.add( RestParams.SSH_KEY, "{}" );
+        environmentCreateForm.add( RestParams.SSH_KEY, publicKeyFileContent );
 
         ClientResponse environmentBuildResponse = resource.type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
                                                           .accept( MediaType.APPLICATION_JSON )
@@ -212,7 +234,6 @@ public class SubutaiClient
         Form addContainerToExistingEnvironmentForm = new Form();
         addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_ID, environmentId.toString() );
         addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( runnerTopology ) );
-        // TODO set the environment ssh key when it works on Subutai
         addContainerToExistingEnvironmentForm.add( RestParams.SSH_KEY, null );
 
         ClientResponse addNodeGroupResponse = resource.path( "/grow" )
