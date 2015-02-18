@@ -37,7 +37,8 @@ public interface InstanceManager {
 
     void terminateInstances( Collection<String> instanceIds );
 
-    LaunchResult launchCluster( ICoordinatedStack stack, ICoordinatedCluster cluster, int timeout );
+    LaunchResult launchCluster( ICoordinatedStack stack,
+                                ICoordinatedCluster cluster, int timeout, String publicKeyFilePath );
 
     LaunchResult launchRunners( ICoordinatedStack stack, InstanceSpec spec, int timeout );
 

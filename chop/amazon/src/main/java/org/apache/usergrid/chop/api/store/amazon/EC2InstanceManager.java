@@ -117,7 +117,6 @@ public class EC2InstanceManager implements InstanceManager {
      * @param timeout   in milliseconds, if smaller than <code>getDefaultTimeout()</code> it doesn't wait
      * @return          resulting runner instances which successfully got in Running state
      */
-    @Override
     public LaunchResult launchCluster( ICoordinatedStack stack, ICoordinatedCluster cluster, int timeout ) {
 
         RunInstancesResult runInstancesResult = null;
@@ -187,6 +186,13 @@ public class EC2InstanceManager implements InstanceManager {
         Collection<Instance> instances = toInstances( getEC2Instances( instanceIds ) );
 
         return new EC2LaunchResult( cluster.getInstanceSpec(), instances );
+    }
+
+
+    @Override
+    public LaunchResult launchCluster( final ICoordinatedStack stack, final ICoordinatedCluster cluster,
+                                       final int timeout, final String publicKeyFilePath ) {
+        return launchCluster( stack, cluster, timeout );
     }
 
 
