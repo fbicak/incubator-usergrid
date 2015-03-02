@@ -115,6 +115,8 @@ public class SubutaiClient
 
         // Returns the uuid of the environment created from the supplied topology
         Form environmentCreateForm = new Form();
+        environmentCreateForm.add( RestParams.ENVIRONMENT_NAME, gson.toJson( stack.getName() ) );
+        environmentCreateForm.add( RestParams.ENVIRONMENT_SUBNET, "192.168.1.2/24" );
         environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
         environmentCreateForm.add( RestParams.SSH_KEY, publicKeyFileContent );
 
@@ -149,7 +151,6 @@ public class SubutaiClient
         nodeGroupPlacement.put( localPeerId, clusterNodeGroups );
 
         topology.setNodeGroupPlacement( nodeGroupPlacement );
-        topology.setEnvironmentName( stack.getName() );
         return topology;
     }
 
@@ -167,7 +168,6 @@ public class SubutaiClient
         nodeGroupPlacement.put( localPeerId, runnerNodeGroupSet );
 
         topology.setNodeGroupPlacement( nodeGroupPlacement );
-        topology.setEnvironmentName( stack.getName() );
         return topology;
     }
 
