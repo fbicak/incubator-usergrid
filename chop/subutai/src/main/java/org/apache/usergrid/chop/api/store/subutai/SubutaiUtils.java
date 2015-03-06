@@ -32,12 +32,15 @@ import org.safehaus.subutai.common.host.ContainerHostState;
 import org.safehaus.subutai.common.protocol.PlacementStrategy;
 import org.safehaus.subutai.core.env.rest.ContainerJson;
 
+import com.google.common.base.Preconditions;
+
 
 public class SubutaiUtils
 {
 
 
     public static Instance getInstanceFromContainer( ContainerJson containerHost ) {
+        Preconditions.checkNotNull( containerHost.getIp() );
         BasicInstanceSpec instanceSpec = new BasicInstanceSpec();
         instanceSpec.setImageId( containerHost.getTemplateName() );
 

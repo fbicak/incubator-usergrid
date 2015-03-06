@@ -35,4 +35,10 @@ public interface SubutaiFig extends GuicyFig {
     @Key( SubutaiFig.SUBUTAI_PEER_SITE )
     String getSubutaiPeerSite();
 
+
+
+    String SUBUTAI_AUTH_TOKEN = "subutai.auth.token";
+
+    @Key( SubutaiFig.SUBUTAI_AUTH_TOKEN )
+    String getSubutaiAuthToken();
 }
