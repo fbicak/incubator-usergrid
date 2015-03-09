@@ -110,7 +110,14 @@ public class SubutaiClient
         }
 
         // Create the topology from the supplied stack
-        TopologyJson topology = getTopologyFromStack( stack );
+        TopologyJson topology;
+        try {
+            topology = getTopologyFromStack( stack );
+        }
+        catch ( SubutaiException e ) {
+            LOG.error( e.getMessage() );
+            return null;
+        }
 
         // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
@@ -140,8 +147,7 @@ public class SubutaiClient
     }
 
 
-    public TopologyJson getTopologyFromStack( final ICoordinatedStack stack )
-    {
+    public TopologyJson getTopologyFromStack( final ICoordinatedStack stack ) throws SubutaiException {
         TopologyJson topology = new TopologyJson();
         Set<NodeGroup> clusterNodeGroups = new HashSet<NodeGroup>( stack.getClusters().size() );
 
@@ -159,8 +165,7 @@ public class SubutaiClient
 
 
 
-    public TopologyJson getRunnerTopology( final ICoordinatedStack stack, InstanceSpec spec )
-    {
+    public TopologyJson getRunnerTopology( final ICoordinatedStack stack, InstanceSpec spec ) throws SubutaiException {
         Set<NodeGroup> runnerNodeGroupSet = new HashSet<NodeGroup>();
         runnerNodeGroupSet.add( SubutaiUtils.getRunnerNodeGroup( stack, spec ) );
 
@@ -175,7 +180,7 @@ public class SubutaiClient
     }
 
 
-    public UUID getLocalPeerId() {
+    public UUID getLocalPeerId() throws SubutaiException {
         // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( PEER_BASE_ENDPOINT );
 
@@ -186,8 +191,8 @@ public class SubutaiClient
 
 
         if ( peerIdResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
-            LOG.error( "Could not retrieve the id of local peer! Error: {}", peerIdResponse.getEntity( String.class ) );
-            return null;
+            String errorMessage = String.format( "Could not retrieve the id of local peer! Error: %s", peerIdResponse.getEntity( String.class ) );
+            throw new SubutaiException( errorMessage );
         }
 
         String responseMessage = peerIdResponse.getEntity( String.class );
@@ -213,7 +218,7 @@ public class SubutaiClient
             }
 
             if ( coordinatedCluster.getInstances().size() != cluster.getSize() ) {
-                LOG.error( String.format( "{} number of instances are created for {} cluster out of {}. Not creating runner instances!",
+                LOG.error( String.format( "%s number of instances are created for %s cluster out of %s. Not creating runner instances!",
                         coordinatedCluster.getInstances().size() + "", cluster.getName(), cluster.getSize() + "" ) );
                 return runnerInstances;
             }
@@ -228,7 +233,14 @@ public class SubutaiClient
             return runnerInstances;
         }
 
-        TopologyJson runnerTopology = getRunnerTopology( stack, spec );
+        TopologyJson runnerTopology;
+        try {
+            runnerTopology = getRunnerTopology( stack, spec );
+        }
+        catch ( SubutaiException e ) {
+            LOG.error( e.getMessage() );
+            return runnerInstances;
+        }
 
         // Send a request to add the nodegroup the specified environment
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
