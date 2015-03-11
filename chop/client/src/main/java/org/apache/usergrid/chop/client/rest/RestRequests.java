@@ -55,13 +55,23 @@ public class RestRequests {
          * it should be removed if we switch to a CA signed dynamic certificate scheme!
          * */
         javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
-            new javax.net.ssl.HostnameVerifier() {
-                public boolean verify( String hostname, javax.net.ssl.SSLSession sslSession) {
-                    return hostname.equals( runner.getHostname() ) || hostname.equals( runner.getHostname() + "." +
-                            Common.DEFAULT_DOMAIN_NAME );
-                }
-            }
-        );
+                new javax.net.ssl.HostnameVerifier() {
+                    public boolean verify( String hostname, javax.net.ssl.SSLSession sslSession) {
+                        boolean isVerified = hostname.equals( runner.getHostname() ) || hostname.equals( runner.getHostname() + "." +
+                                Common.DEFAULT_DOMAIN_NAME )  || hostname.equals( runner.getIpv4Address() );
+                        if ( ! isVerified ) {
+                            LOG.error( String.format( "Runner %s is not verified! Expected hostname: %s. " +
+                                            "Unverified runner information: URL: %s, Hostname: %s, IP: %s",
+                                    runner.getHostname() , hostname, runner.getUrl(),
+                                    runner.getHostname(), runner.getIpv4Address() )  );
+                        }
+                        else {
+                            LOG.debug( String.format( "Runner %s is verified.", runner.getHostname()  ) );
+                        }
+                        return isVerified;
+                    }
+                } );
+
         if ( ! ChopUtils.isTrusted( runner ) ) {
             try {
                 ChopUtils.installRunnerKey( null, runner );
