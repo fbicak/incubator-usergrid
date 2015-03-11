@@ -27,7 +27,7 @@ import static junit.framework.TestCase.assertNotNull;
 @FixMethodOrder( MethodSorters.NAME_ASCENDING)
 @IterationChop( iterations = 100, threads = 4 )
 public class CassandraClusterTest {
-    private static final Logger LOG = LoggerFactory.getLogger( SimpleCassandraClient.class );
+    private static final Logger LOG = LoggerFactory.getLogger( CassandraClusterTest.class );
 
     // Cluster name should be same the same with the cluster defined inside stack.json file
     @ChopCluster( name = "TestCassandraCluster" )
