@@ -242,7 +242,7 @@ public class RunnerConfig extends GuiceServletContextListener {
     private void registerRunner(  ) {
         RunnerAppJettyRunner jettyRunner = RunnerAppJettyRunner.getInstance();
 
-        int time = 5000;
+        int time = 10000;
         while ( ! jettyRunner.isStarted( 100 ) ) {
             time -= 100;
 
@@ -253,8 +253,8 @@ public class RunnerConfig extends GuiceServletContextListener {
         runner.bypass( Runner.SERVER_PORT_KEY, "" + jettyRunner.getPort() );
 
         if ( providerName.equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
-            // TODO get the domain name via rest calls to Subutai peer
-            runner.bypass( Runner.URL_KEY, "https://" + runner.getHostname() + "." + Common.DEFAULT_DOMAIN_NAME
+//            TODO change runner URL if the container is reachable via its hostname
+            runner.bypass( Runner.URL_KEY, "https://" + runner.getIpv4Address()
                     + ":" + runner.getServerPort() );
         } else {
             runner.bypass( Runner.URL_KEY, "https://" + runner.getHostname() + ":" + runner.getServerPort() );
