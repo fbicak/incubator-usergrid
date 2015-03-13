@@ -125,6 +125,7 @@ public class SubutaiClient
         // Returns the uuid of the environment created from the supplied topology
         Form environmentCreateForm = new Form();
         environmentCreateForm.add( RestParams.ENVIRONMENT_NAME, gson.toJson( stack.getName() ) );
+        // TODO get free subnets via a rest call when it is implemented on Subutai
         environmentCreateForm.add( RestParams.ENVIRONMENT_SUBNET, "192.168.179.1/24" );
         environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
         environmentCreateForm.add( RestParams.SSH_KEY, publicKeyFileContent );
