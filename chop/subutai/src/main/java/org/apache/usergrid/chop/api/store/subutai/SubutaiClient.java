@@ -63,6 +63,7 @@ public class SubutaiClient
 
     private String httpAddress;
     private Client client;
+    private String authToken;
 
     public static final String REST_BASE_ENDPOINT = "/cxf";
     public static final String ENVIRONMENT_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/environments";
@@ -73,10 +74,11 @@ public class SubutaiClient
     private Gson gson;
 
 
-    public SubutaiClient( String httpAddress ) {
-        this.httpAddress = httpAddress;
+    public SubutaiClient( SubutaiFig subutaiFig ) {
+        this.httpAddress = subutaiFig.getSubutaiPeerSite();
         DefaultClientConfig clientConfig = new DefaultClientConfig();
         client = Client.create( clientConfig );
+        authToken = subutaiFig.getSubutaiAuthToken();
         gson = new Gson();
     }
 
@@ -108,17 +110,28 @@ public class SubutaiClient
         }
 
         // Create the topology from the supplied stack
-        TopologyJson topology = getTopologyFromStack( stack );
+        TopologyJson topology;
+        try {
+            topology = getTopologyFromStack( stack );
+        }
+        catch ( SubutaiException e ) {
+            LOG.error( e.getMessage() );
+            return null;
+        }
 
         // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
 
         // Returns the uuid of the environment created from the supplied topology
         Form environmentCreateForm = new Form();
+        environmentCreateForm.add( RestParams.ENVIRONMENT_NAME, gson.toJson( stack.getName() ) );
+        // TODO get free subnets via a rest call when it is implemented on Subutai
+        environmentCreateForm.add( RestParams.ENVIRONMENT_SUBNET, "192.168.179.1/24" );
         environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
         environmentCreateForm.add( RestParams.SSH_KEY, publicKeyFileContent );
 
-        ClientResponse environmentBuildResponse = resource.type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
+        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                                          .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
                                                           .accept( MediaType.APPLICATION_JSON )
                                                           .post( ClientResponse.class, environmentCreateForm );
 
@@ -135,8 +148,7 @@ public class SubutaiClient
     }
 
 
-    public TopologyJson getTopologyFromStack( final ICoordinatedStack stack )
-    {
+    public TopologyJson getTopologyFromStack( final ICoordinatedStack stack ) throws SubutaiException {
         TopologyJson topology = new TopologyJson();
         Set<NodeGroup> clusterNodeGroups = new HashSet<NodeGroup>( stack.getClusters().size() );
 
@@ -149,14 +161,12 @@ public class SubutaiClient
         nodeGroupPlacement.put( localPeerId, clusterNodeGroups );
 
         topology.setNodeGroupPlacement( nodeGroupPlacement );
-        topology.setEnvironmentName( stack.getName() );
         return topology;
     }
 
 
 
-    public TopologyJson getRunnerTopology( final ICoordinatedStack stack, InstanceSpec spec )
-    {
+    public TopologyJson getRunnerTopology( final ICoordinatedStack stack, InstanceSpec spec ) throws SubutaiException {
         Set<NodeGroup> runnerNodeGroupSet = new HashSet<NodeGroup>();
         runnerNodeGroupSet.add( SubutaiUtils.getRunnerNodeGroup( stack, spec ) );
 
@@ -167,24 +177,23 @@ public class SubutaiClient
         nodeGroupPlacement.put( localPeerId, runnerNodeGroupSet );
 
         topology.setNodeGroupPlacement( nodeGroupPlacement );
-        topology.setEnvironmentName( stack.getName() );
         return topology;
     }
 
 
-    public UUID getLocalPeerId() {
+    public UUID getLocalPeerId() throws SubutaiException {
         // Send a request to build the topology
         WebResource resource = client.resource( "http://" + httpAddress ).path( PEER_BASE_ENDPOINT );
 
         // Returns the uuid of the peer
         ClientResponse peerIdResponse = resource.path( "id" )
-                                                          .type( MediaType.APPLICATION_JSON )
-                                                          .get( ClientResponse.class );
+                                                .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                                .get( ClientResponse.class );
 
 
         if ( peerIdResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
-            LOG.error( "Could not retrieve the id of local peer! Error: {}", peerIdResponse.getEntity( String.class ) );
-            return null;
+            String errorMessage = String.format( "Could not retrieve the id of local peer! Error: %s", peerIdResponse.getEntity( String.class ) );
+            throw new SubutaiException( errorMessage );
         }
 
         String responseMessage = peerIdResponse.getEntity( String.class );
@@ -210,7 +219,7 @@ public class SubutaiClient
             }
 
             if ( coordinatedCluster.getInstances().size() != cluster.getSize() ) {
-                LOG.error( String.format( "{} number of instances are created for {} cluster out of {}. Not creating runner instances!",
+                LOG.error( String.format( "%s number of instances are created for %s cluster out of %s. Not creating runner instances!",
                         coordinatedCluster.getInstances().size() + "", cluster.getName(), cluster.getSize() + "" ) );
                 return runnerInstances;
             }
@@ -225,7 +234,14 @@ public class SubutaiClient
             return runnerInstances;
         }
 
-        TopologyJson runnerTopology = getRunnerTopology( stack, spec );
+        TopologyJson runnerTopology;
+        try {
+            runnerTopology = getRunnerTopology( stack, spec );
+        }
+        catch ( SubutaiException e ) {
+            LOG.error( e.getMessage() );
+            return runnerInstances;
+        }
 
         // Send a request to add the nodegroup the specified environment
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
@@ -237,9 +253,10 @@ public class SubutaiClient
         addContainerToExistingEnvironmentForm.add( RestParams.SSH_KEY, null );
 
         ClientResponse addNodeGroupResponse = resource.path( "/grow" )
-                                                          .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
-                                                          .accept( MediaType.APPLICATION_JSON )
-                                                          .post( ClientResponse.class, addContainerToExistingEnvironmentForm );
+                                                      .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                                      .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
+                                                      .accept( MediaType.APPLICATION_JSON )
+                                                      .post( ClientResponse.class, addContainerToExistingEnvironmentForm );
 
         String responseMessage = addNodeGroupResponse.getEntity( String.class );
         LOG.debug( "Response of add node group rest call: {}", responseMessage );
@@ -274,6 +291,7 @@ public class SubutaiClient
         // Returns the uuid of the environment created from the supplied blueprint
         ClientResponse environmentIdResponse = resource.path( "/environmentId" )
                                                       .queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
+                                                      .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                       .type( MediaType.APPLICATION_JSON )
                                                       .get( ClientResponse.class );
 
@@ -299,6 +317,7 @@ public class SubutaiClient
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
         ClientResponse environmentGetResponse = resource.path( environmentId.toString() )
+                                                        .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                         .type( MediaType.APPLICATION_JSON )
                                                         .accept( MediaType.APPLICATION_JSON )
                                                         .get( ClientResponse.class );
@@ -320,6 +339,7 @@ public class SubutaiClient
         WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
         ClientResponse environmentDestroyResponse = resource.queryParam( RestParams.ENVIRONMENT_ID, environmentId.toString() )
+                                                            .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                             .type( MediaType.APPLICATION_JSON )
                                                             .delete( ClientResponse.class );
 
@@ -340,6 +360,7 @@ public class SubutaiClient
         WebResource resource = client.resource( "http://" + httpAddress ).path( CONTAINER_BASE_ENDPOINT );
         // Returns the uuid of the environment created from the supplied blueprint
         ClientResponse instanceDestroyResponse = resource.queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
+                                                         .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                          .type( MediaType.APPLICATION_JSON )
                                                          .delete( ClientResponse.class );
 
@@ -361,6 +382,7 @@ public class SubutaiClient
         // Returns the uuid of the environment created from the supplied blueprint
         ClientResponse instanceDestroyResponse = resource.path( "/state" )
                                                          .queryParam( RestParams.INSTANCE_ID, instanceId.toString() )
+                                                         .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                          .type( MediaType.APPLICATION_JSON )
                                                          .get( ClientResponse.class );
 
@@ -467,6 +489,7 @@ public class SubutaiClient
                                                             .path( "/" + nodeIdsSeperatedByComma )
                                                             .path( "/seeds" )
                                                             .path( "/" + seedIdsSeperatedByComma )
+                                                            .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                             .type( MediaType.APPLICATION_JSON )
                                                             .post( ClientResponse.class );
 
@@ -489,10 +512,10 @@ public class SubutaiClient
             // Start cluster
             resource = client.resource( "http://" + httpAddress ).path( CASSANDRA_PLUGIN_BASE_ENDPOINT );
             startCassandraResponse = resource.path( "/clusters" )
-                                                            .path( "/" + cluster.getName() )
-                                                            .path( "/start" )
-                                                            .type( MediaType.APPLICATION_JSON )
-                                                            .put( ClientResponse.class );
+                                             .path( "/" + cluster.getName() )
+                                             .path( "/start" )
+                                             .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                             .put( ClientResponse.class );
 
             success = startCassandraResponse.getStatus() == Response.Status.OK.getStatusCode() ? true : false;
 

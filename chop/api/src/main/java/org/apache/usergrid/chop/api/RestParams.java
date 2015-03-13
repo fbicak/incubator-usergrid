@@ -43,8 +43,11 @@ public interface RestParams {
     String MD5 = "md5";
     String RUNNER_COUNT = "runnerCount";
     String ENVIRONMENT_TOPOLOGY = "topology";
+    String ENVIRONMENT_NAME = "name";
+    String ENVIRONMENT_SUBNET = "subnet";
     String NODE_GROUP = "nodeGroup";
     String ENVIRONMENT_ID = "environmentId";
     String INSTANCE_ID = "containerId";
+    String SUBUTAI_AUTH_TOKEN_NAME = "sptoken";
     String SSH_KEY = "key";
 }

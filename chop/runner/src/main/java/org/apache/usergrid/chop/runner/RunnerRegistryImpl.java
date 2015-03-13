@@ -21,10 +21,13 @@ package org.apache.usergrid.chop.runner;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.usergrid.chop.api.CoordinatorFig;
 import org.apache.usergrid.chop.api.Project;
@@ -32,8 +35,10 @@ import org.apache.usergrid.chop.api.RestParams;
 import org.apache.usergrid.chop.api.Runner;
 import org.apache.usergrid.chop.spi.RunnerRegistry;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
+import org.apache.usergrid.chop.stack.SetupStackState;
 
 import org.safehaus.jettyjam.utils.CertUtils;
+import org.safehaus.guicyfig.Env;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +46,10 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 
 /**
@@ -163,10 +170,43 @@ public class RunnerRegistryImpl implements RunnerRegistry {
 
 
     @Override
+    public SetupStackState getStackState() {
+
+        /** Status  */
+        DefaultClientConfig clientConfig = new DefaultClientConfig();
+        Client client = Client.create( clientConfig );
+        WebResource resource = client.resource( coordinatorFig.getEndpoint() ).path( "/status" );
+        ClientResponse resp = resource.queryParam( RestParams.COMMIT_ID, project.getVcsVersion() )
+                                      .queryParam( RestParams.MODULE_ARTIFACTID, project.getArtifactId() )
+                                      .queryParam( RestParams.MODULE_GROUPID, project.getGroupId() )
+                                      .queryParam( RestParams.MODULE_VERSION, project.getVersion() )
+                                      .queryParam( RestParams.USERNAME, coordinatorFig.getUsername() )
+                                      .type( MediaType.APPLICATION_JSON ).accept( MediaType.APPLICATION_JSON )
+                                      .post( ClientResponse.class );
+
+        if ( resp.getStatus() != Response.Status.OK.getStatusCode() && resp.getStatus() != Response.Status.CREATED
+                .getStatusCode() ) {
+            LOG.error( "Could not get the status from coordinator, HTTP status: {}", resp.getStatus() );
+            LOG.error( "Error Message: {}", resp.getEntity( String.class ) );
+            return null;
+        }
+
+        SetupStackState stackState = resp.getEntity( SetupStackState.class );
+        return stackState;
+    }
+
+
+    @Override
     public List<ICoordinatedCluster> getClusters() {
         if( RunnerConfig.isTestMode() ) {
             return Collections.emptyList();
         }
+
+        // Wait for other runners to register to the coordinator
+        // before checking the cluster information
+        // since getProperties method in PropertiesResource class
+        // returns empty cluster information if the stack state is not SetUp
+        waitUntil( SetupStackState.SetUp, 600000 );
 
         WebResource resource = Client.create().resource( coordinatorFig.getEndpoint() );
         StringBuilder sb = new StringBuilder();
@@ -186,4 +226,50 @@ public class RunnerRegistryImpl implements RunnerRegistry {
                 .accept( MediaType.APPLICATION_JSON )
                 .get( new GenericType<List<ICoordinatedCluster>>() { } );
     }
+
+
+    /*
+    Wait for the stack state to be equal to the expected stack state until the specified timeout
+     */
+    private void waitUntil( final SetupStackState expectedStackState, final int timeout ) {
+        final long SLEEP_LENGTH = 10000;
+        Calendar cal = Calendar.getInstance();
+        cal.setTime( new Date() );
+        final long startTime = cal.getTimeInMillis();
+        long timePassed;
+
+        do {
+            SetupStackState stackState = getStackState();
+
+            // This if case only happens when webapp and runners are started in test mode
+            Env environment = Env.getEnvironment();
+            if ( ( environment != null && environment.equals( Env.UNIT ) ) ||
+                    ( stackState != null && stackState.equals( SetupStackState.JarNotFound ) ) ) {
+                LOG.info( "Setting stack state to the expected state since test mode is captured." );
+                stackState = expectedStackState;
+            }
+
+            if ( stackState != null && stackState.equals( expectedStackState ) ) {
+                LOG.info( "Stack state is \"" + expectedStackState + "\" as expected, continuing...");
+                return;
+            }
+            cal.setTime( new Date() );
+            timePassed = cal.getTimeInMillis() - startTime;
+            try {
+                if ( stackState != null )  {
+                    LOG.info( "Current stack state: \"" + stackState + "\", expected state: \"" + expectedStackState
+                        +"\". Waiting maximum " + timeout + " milliseconds." );
+                }
+                else {
+                    LOG.warn( "Could not get stack state from coordinator!" );
+                }
+                Thread.sleep( SLEEP_LENGTH );
+            }
+            catch ( InterruptedException e ) {
+                LOG.warn( "Thread interrupted while sleeping", e );
+            }
+        } while ( timePassed < timeout );
+        LOG.warn( "Waiting stack state to get into \"" + expectedStackState + "\" state has timed out!");
+    }
+
 }

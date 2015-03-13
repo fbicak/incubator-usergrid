@@ -103,6 +103,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         else if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
             SubutaiFig subutaiFig = InjectorFactory.getInstance( SubutaiFig.class );
             subutaiFig.bypass( SubutaiFig.SUBUTAI_PEER_SITE, stack.getDataCenter() );
+            subutaiFig.bypass( SubutaiFig.SUBUTAI_AUTH_TOKEN, providerParams.getSecretKey() );
         }
 
         InstanceManager instanceManager = InjectorFactory.getInstance( InstanceManager.class );

@@ -16,7 +16,7 @@
     },
     "size" : 2
   } ],
-  "dataCenter" : "172.16.11.188:8181",
+  "dataCenter" : "172.16.9.11:8542",
   "ipRuleSet" : {
     "name" : "ChopTestSecurityGroup",
     "id" : "40a543f3-9cfc-44bc-b896-77574cae1772",

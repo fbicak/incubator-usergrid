@@ -84,7 +84,7 @@ public class StatusResource extends TestableResource implements RestParams {
         SetupStackState status = stackCoordinator.stackStatus( commitId, artifactId, groupId, version, user );
 
         return Response.status( Response.Status.CREATED )
-                .entity( "Current state: " + status )
+                .entity( status )
                 .type( MediaType.APPLICATION_JSON )
                 .build();
     }

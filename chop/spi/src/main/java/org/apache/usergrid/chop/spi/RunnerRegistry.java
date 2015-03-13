@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.usergrid.chop.api.Runner;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
+import org.apache.usergrid.chop.stack.SetupStackState;
 
 
 /**
@@ -63,6 +64,10 @@ public interface RunnerRegistry {
      */
     void unregister( Runner runner );
 
+    /**
+     * Returns state of the stack of which the runner belongs to
+     */
+    SetupStackState getStackState();
 
     /**
      * @return all set up clusters list from coordinator

@@ -55,6 +55,7 @@ import org.apache.usergrid.chop.stack.Stack;
 import org.apache.usergrid.chop.stack.User;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.ValueMatchingStrategy;
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import com.google.gson.Gson;
 import com.google.inject.Guice;
@@ -67,6 +68,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.junit.Assert.assertEquals;
@@ -110,7 +112,8 @@ public class TestSubutaiClient
         Injector injector = Guice.createInjector( new SubutaiModule() );
         subutaiFig = injector.getInstance( SubutaiFig.class );
         subutaiFig.bypass( SubutaiFig.SUBUTAI_PEER_SITE, "127.0.0.1:" + TEST_PORT );
-        subutaiClient = new SubutaiClient( "127.0.0.1:" + TEST_PORT );
+        subutaiFig.bypass( SubutaiFig.SUBUTAI_AUTH_TOKEN, "test_token" );
+        subutaiClient = new SubutaiClient( subutaiFig );
         subutaiInstanceManager = new SubutaiInstanceManager( subutaiFig );
 
         ObjectMapper mapper = new ObjectMapper();
@@ -169,28 +172,15 @@ public class TestSubutaiClient
                                    ) );
 
         // Configure cluster
-        stubFor( post( urlMatching( SubutaiClient.CASSANDRA_PLUGIN_CONFIGURE_ENDPOINT
-                        + "/.+"
-                        +  "/clusterName"
-                        + "/.+"
-                        +  "/nodes"
-                        +  "/.+"
-                        +  "/seeds"
-                        +  "/.+"
-                                  )
-                     )
-                        .willReturn( aResponse()
-                                        .withStatus( 200 )
-                                   )
+        stubFor( post( urlMatching(
+                        SubutaiClient.CASSANDRA_PLUGIN_CONFIGURE_ENDPOINT + "/.+" + "/clusterName" + "/.+" + "/nodes"
+                                + "/.+" + "/seeds" + "/.+" ) )
+                        .willReturn( aResponse().withStatus( 200 ) )
                );
 
         // Start cluster
-        stubFor( put( urlMatching( SubutaiClient.CASSANDRA_PLUGIN_BASE_ENDPOINT + "/clusters" + "/.+" + "/start"
-
-                                 ) )
-                        .willReturn( aResponse()
-                                        .withStatus( 200 )
-                                   )
+        stubFor( put( urlMatching( SubutaiClient.CASSANDRA_PLUGIN_BASE_ENDPOINT + "/clusters" + "/.+/start.+" )
+                    ).willReturn( aResponse().withStatus( 200 ) )
                );
 
         // Get environment by environmentId

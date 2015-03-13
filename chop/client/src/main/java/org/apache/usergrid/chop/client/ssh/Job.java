@@ -54,6 +54,8 @@ public class Job implements Callable<ResponseInfo> {
     private static final Logger LOG = LoggerFactory.getLogger( Job.class );
 
     protected static final int SESSION_CONNECT_TIMEOUT = 100000;
+    // TODO remove this when Subutai ssh port opens more quickly
+    protected static final int SUBUTAI_SESSION_CONNECT_TIMEOUT = 200000;
 
     protected Collection<Command> commands;
     protected SshValues value;
@@ -111,7 +113,7 @@ public class Job implements Callable<ResponseInfo> {
     private void setSubutaiSession() {
         JSch ssh;
         // wait until SSH port of remote end comes up
-        boolean success = waitActive( SESSION_CONNECT_TIMEOUT );
+        boolean success = waitActive( SUBUTAI_SESSION_CONNECT_TIMEOUT );
         if( ! success ) {
             LOG.warn( "Port 22 of {} did not open in time", value.getPublicIpAddress() );
         }

@@ -57,7 +57,7 @@ public class SubutaiInstanceManager implements InstanceManager
      */
     @Inject
     public SubutaiInstanceManager( SubutaiFig subutaiFig ) {
-        subutaiClient = new SubutaiClient( subutaiFig.getSubutaiPeerSite() );
+        subutaiClient = new SubutaiClient( subutaiFig );
     }
 
 
