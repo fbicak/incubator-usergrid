@@ -121,7 +121,6 @@ public class Job implements Callable<ResponseInfo> {
         // try to open ssh session
         String userName = Utils.SUBUTAI_USER;
         try {
-            Thread.sleep( 30000 );
             ssh = new JSch();
             ssh.addIdentity( value.getSshKeyFile() );
             session = ssh.getSession( userName, value.getPublicIpAddress() );

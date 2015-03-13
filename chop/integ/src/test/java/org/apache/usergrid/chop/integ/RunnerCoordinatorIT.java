@@ -39,6 +39,7 @@ import static junit.framework.TestCase.assertTrue;
  * and then proceeds to start up two runners generated from the example project
  * using chop:runner.
  */
+@Ignore
 public class RunnerCoordinatorIT {
     private static final String[] webappArgs = new String[] { "-e" };
 

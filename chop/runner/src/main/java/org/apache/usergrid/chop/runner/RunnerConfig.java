@@ -37,7 +37,6 @@ import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.spi.RunnerRegistry;
 import org.safehaus.guicyfig.Env;
 import org.safehaus.jettyjam.utils.TestMode;
-import org.safehaus.subutai.common.settings.Common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
