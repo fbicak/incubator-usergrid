@@ -66,28 +66,22 @@ public class RestRequests {
                                     runner.getHostname(), runner.getIpv4Address() )  );
                         }
                         else {
-                            LOG.debug( String.format( "Runner %s is verified.", runner.getHostname()  ) );
+                            LOG.info( String.format( "Runner %s is verified.", runner.getHostname()  ) );
                         }
                         return isVerified;
                     }
                 } );
 
         if ( ! ChopUtils.isTrusted( runner ) ) {
-            try {
-                ChopUtils.installRunnerKey( null, runner );
-            }
-            catch ( Exception e ) {
-                LOG.error( "Failed to install certificate for runner: {}", runner.getHostname() );
-
                 try {
-                    ChopUtils.installCert( runner.getHostname(), runner.getServerPort(), null );
+                    ChopUtils.installCert( runner.getIpv4Address(), runner.getServerPort(), null );
                 }
-                catch ( Exception e2 ) {
+                catch ( Exception e ) {
                     LOG.error( "Failed to get certificate from server {} on port {}: dumping stack trace!",
                             runner.getHostname(), runner.getServerPort() );
                     e.printStackTrace();
                 }
-            }
+//            }
         }
     }
 
