@@ -66,7 +66,7 @@ public class RestRequests {
                                     runner.getHostname(), runner.getIpv4Address() )  );
                         }
                         else {
-                            LOG.info( String.format( "Runner %s is verified.", runner.getHostname()  ) );
+                            LOG.debug( String.format( "Runner %s is verified.", runner.getHostname()  ) );
                         }
                         return isVerified;
                     }
