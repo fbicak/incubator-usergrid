@@ -322,7 +322,7 @@ public class ChopUtils {
 
 
         public X509Certificate[] getAcceptedIssuers() {
-            throw new UnsupportedOperationException();
+            return new X509Certificate[0];
         }
 
 
