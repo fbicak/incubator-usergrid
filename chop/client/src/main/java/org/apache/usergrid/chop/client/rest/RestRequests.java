@@ -81,7 +81,6 @@ public class RestRequests {
                             runner.getHostname(), runner.getServerPort() );
                     e.printStackTrace();
                 }
-//            }
         }
     }
 

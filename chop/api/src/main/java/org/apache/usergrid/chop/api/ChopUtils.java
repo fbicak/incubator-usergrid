@@ -102,16 +102,9 @@ public class ChopUtils {
     }
 
 
-    public static boolean isTrusted( String hostname ) {
-        synchronized ( lock ) {
-            return trustedHosts.contains( hostname );
-        }
-    }
-
-
     public static boolean isTrusted( Runner runner ) {
         synchronized ( lock ) {
-            return trustedHosts.contains( runner.getHostname() );
+            return trustedHosts.contains( runner.getHostname() ) || trustedHosts.contains( runner.getIpv4Address() );
         }
     }
 
@@ -295,6 +288,9 @@ public class ChopUtils {
 
         LOG.debug( "cert = {}", cert );
         LOG.debug( "Added certificate to keystore 'jssecacerts' using alias '" + host + "'" );
+        synchronized ( lock ) {
+            trustedHosts.add( host );
+        }
     }
 
 
