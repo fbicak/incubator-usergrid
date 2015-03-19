@@ -73,21 +73,14 @@ public class RestRequests {
                 } );
 
         if ( ! ChopUtils.isTrusted( runner ) ) {
-            try {
-                ChopUtils.installRunnerKey( null, runner );
-            }
-            catch ( Exception e ) {
-                LOG.error( "Failed to install certificate for runner: {}", runner.getHostname() );
-
                 try {
-                    ChopUtils.installCert( runner.getHostname(), runner.getServerPort(), null );
+                    ChopUtils.installCert( runner.getIpv4Address(), runner.getServerPort(), null );
                 }
-                catch ( Exception e2 ) {
+                catch ( Exception e ) {
                     LOG.error( "Failed to get certificate from server {} on port {}: dumping stack trace!",
                             runner.getHostname(), runner.getServerPort() );
                     e.printStackTrace();
                 }
-            }
         }
     }
 
