@@ -27,8 +27,7 @@ import com.netflix.config.ConfigurationManager;
 import org.apache.commons.cli.CommandLine;
 import org.apache.shiro.guice.aop.ShiroAopModule;
 
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
-import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.webapp.dao.SetupDao;
 import org.apache.usergrid.chop.webapp.elasticsearch.ElasticSearchFig;
 import org.apache.usergrid.chop.webapp.elasticsearch.EsEmbedded;
@@ -58,7 +57,7 @@ public class ChopUiConfig extends GuiceServletContextListener {
     private EsEmbedded esEmbedded;
     private Injector injector;
     private ServletContext context;
-    private String providerName = AmazonProvider.PROVIDER_NAME;
+    private String providerName = Providers.AMAZON.getProviderName();
 
     @Override
     protected Injector getInjector() {
@@ -81,11 +80,11 @@ public class ChopUiConfig extends GuiceServletContextListener {
             CommandLine cl = ChopUiJettyRunner.getCommandLine();
             if ( cl.hasOption( 'p' ) ) {
                 String serviceProvider = cl.getOptionValue( 'p' );
-                if ( serviceProvider.toLowerCase().equals( SubutaiProvider.PROVIDER_NAME ) ) {
-                    providerName = SubutaiProvider.PROVIDER_NAME;
+                if ( serviceProvider.toLowerCase().equals( Providers.SUBUTAI.getProviderName() ) ) {
+                    providerName = Providers.SUBUTAI.getProviderName();
                 }
                 else {
-                    providerName = AmazonProvider.PROVIDER_NAME;
+                    providerName = Providers.AMAZON.getProviderName();
                 }
                 LOG.info("The -p option has been provided: webapp will use " + providerName + " as a service provider.");
             }
@@ -177,7 +176,7 @@ public class ChopUiConfig extends GuiceServletContextListener {
         }
 
         // Change the provider name if it is different from the default one
-        if ( ! providerName.equals( AmazonProvider.PROVIDER_NAME ) ) {
+        if ( ! providerName.equals( Providers.AMAZON.getProviderName() ) ) {
             chopUiFig.bypass( ChopUiFig.SERVICE_PROVIDER_KEY, providerName );
         }
 

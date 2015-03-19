@@ -25,9 +25,8 @@ import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.shiro.guice.web.ShiroWebModule;
 import org.apache.usergrid.chop.api.Project;
 import org.apache.usergrid.chop.api.store.amazon.AmazonModule;
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiModule;
-import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.webapp.coordinator.RunnerCoordinator;
 import org.apache.usergrid.chop.webapp.coordinator.rest.*;
 import org.apache.usergrid.chop.webapp.elasticsearch.ElasticSearchClient;
@@ -67,10 +66,10 @@ public class ChopUiModule extends ServletModule {
 
     protected void configureServlets() {
         install( new GuicyFigModule( ChopUiFig.class, Project.class, RestFig.class, ElasticSearchFig.class ) );
-        if ( providerName.equals( AmazonProvider.PROVIDER_NAME ) ) {
+        if ( providerName.equals( Providers.AMAZON.getProviderName() ) ) {
             install( new AmazonModule() );
         }
-        else if ( providerName.equals( SubutaiProvider.PROVIDER_NAME ) ) {
+        else if ( providerName.equals( Providers.SUBUTAI.getProviderName() ) ) {
             install( new SubutaiModule() );
         }
 

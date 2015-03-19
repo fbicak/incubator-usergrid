@@ -38,8 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.usergrid.chop.api.SshValues;
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
-import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
+import org.apache.usergrid.chop.spi.Providers;
 
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelExec;
@@ -75,10 +74,10 @@ public class Job implements Callable<ResponseInfo> {
 
     private void setSession() {
         // TODO check when Subutai works with ssh keys to see if Amazon and Subutai sessions can be merged
-        if ( value.getProviderName().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+        if ( value.getProviderName().equals( Providers.SUBUTAI.getProviderName() ) ) {
             setSubutaiSession();
         }
-        else if ( value.getProviderName().equals( AmazonProvider.PROVIDER_NAME ) ){
+        else if ( value.getProviderName().equals( Providers.AMAZON.getProviderName() ) ){
             setAmazonSession();
         }
     }
@@ -166,7 +165,7 @@ public class Job implements Callable<ResponseInfo> {
             // TODO remove this commented block when default non-root user can execute sudo commands without password in Subutai
 ////            Append "sudo -S -p '' echo" so that if sudo asks for password, eliminate password prompt
 ////            by doing it in the beginning
-//            if ( value.getProviderName().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+//            if ( value.getProviderName().equals( Providers.SUBUTAI.getProviderName() ) ) {
 //                ( ( ChannelExec ) channel ).setCommand( "echo " + Utils.DEFAULT_SUBUTAI_PASSWORD
 //                        + " | sudo -S -p '' echo > /dev/null && "
 //                        + command.getCommand() );

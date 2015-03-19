@@ -20,6 +20,7 @@ package org.apache.usergrid.chop.api.store.amazon;
 
 
 import org.apache.usergrid.chop.api.SshValues;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.stack.Instance;
 import com.google.common.base.Preconditions;
 
@@ -65,7 +66,7 @@ public class AmazonInstanceValues implements SshValues {
     @Override
     public String getProviderName()
     {
-        return AmazonProvider.PROVIDER_NAME;
+        return Providers.AMAZON.getProviderName();
     }
 }
 

@@ -20,11 +20,13 @@ package org.apache.usergrid.chop.api.store.amazon;
 
 
 import org.apache.usergrid.chop.spi.Provider;
+import org.apache.usergrid.chop.spi.Providers;
 
 
 public class AmazonProvider implements Provider
 {
-    public static final String PROVIDER_NAME = "amazon";
+    public static final String PROVIDER_NAME = Providers.AMAZON.getProviderName();
+
 
     @Override
     public String getName()

@@ -25,7 +25,7 @@ import org.apache.commons.lang.time.DateUtils;
 import org.apache.usergrid.chop.api.Commit;
 import org.apache.usergrid.chop.api.Module;
 import org.apache.usergrid.chop.api.ProviderParams;
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.stack.User;
 import org.apache.usergrid.chop.webapp.ChopUiModule;
 import org.apache.usergrid.chop.webapp.dao.*;
@@ -118,7 +118,7 @@ public class ESSuiteTest {
     public static void setUpData() throws Exception {
         LOG.info( "Setting up sample data for elasticsearch Dao tests..." );
 
-        Injector injector = Guice.createInjector( new ChopUiModule( AmazonProvider.PROVIDER_NAME ) );
+        Injector injector = Guice.createInjector( new ChopUiModule( Providers.AMAZON.getProviderName() ) );
         IElasticSearchClient elasticSearchClient = injector.getInstance(IElasticSearchClient.class);
         elasticSearchClient.start();
 

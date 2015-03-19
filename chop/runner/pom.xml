@@ -135,11 +135,6 @@
   </build>
 
   <dependencies>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>chop-api</artifactId>
-      <version>${project.version}</version>
-    </dependency>
 
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -150,12 +145,6 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>chop-client</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>chop-amazon</artifactId>
       <version>${project.version}</version>
     </dependency>
 

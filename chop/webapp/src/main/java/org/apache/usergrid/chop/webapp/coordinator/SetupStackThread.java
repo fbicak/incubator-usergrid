@@ -30,13 +30,12 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 
 import org.apache.usergrid.chop.api.ProviderParams;
 import org.apache.usergrid.chop.api.store.amazon.AmazonFig;
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiFig;
-import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiUtils;
 import org.apache.usergrid.chop.spi.InstanceManager;
 import org.apache.usergrid.chop.spi.IpRuleManager;
 import org.apache.usergrid.chop.spi.LaunchResult;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.stack.BasicInstanceSpec;
 import org.apache.usergrid.chop.stack.CoordinatedStack;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
@@ -91,7 +90,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
         ProviderParams providerParams = providerParamsDao.getByUser( stack.getUser().getUsername() );
 
         /** Bypass the keys in AmazonFig so that it uses the ones belonging to the user */
-        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( AmazonProvider.PROVIDER_NAME ) ) {
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( Providers.AMAZON.getProviderName() ) ) {
             AmazonFig amazonFig = InjectorFactory.getInstance( AmazonFig.class );
             amazonFig.bypass( AmazonFig.AWS_ACCESS_KEY, providerParams.getAccessKey() );
             amazonFig.bypass( AmazonFig.AWS_SECRET_KEY, providerParams.getSecretKey() );
@@ -100,7 +99,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
             ipRuleManager.setDataCenter( stack.getDataCenter() );
             ipRuleManager.applyIpRuleSet( stack.getIpRuleSet() );
         }
-        else if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+        else if ( chopUiFig.getServiceProvider().equalsIgnoreCase( Providers.SUBUTAI.getProviderName() ) ) {
             SubutaiFig subutaiFig = InjectorFactory.getInstance( SubutaiFig.class );
             subutaiFig.bypass( SubutaiFig.SUBUTAI_PEER_SITE, stack.getDataCenter() );
             subutaiFig.bypass( SubutaiFig.SUBUTAI_AUTH_TOKEN, providerParams.getSecretKey() );
@@ -136,7 +135,7 @@ public class SetupStackThread implements Callable<CoordinatedStack> {
 
             String publicKeyFilePath = null;
 
-            if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+            if ( chopUiFig.getServiceProvider().equalsIgnoreCase( Providers.SUBUTAI.getProviderName() ) ) {
                 String publicKeyFileName = SubutaiUtils.getPublicKeyFileName( cluster.getInstanceSpec().getKeyName() );
                 publicKeyFilePath = providerParams.getKeys().get( publicKeyFileName );
                 if ( publicKeyFilePath == null ) {

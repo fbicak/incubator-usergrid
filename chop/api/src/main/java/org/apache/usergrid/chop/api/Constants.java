@@ -63,4 +63,11 @@ public interface Constants {
     /** Chop delay default */
     long DEFAULT_DELAY = 0;
     String PRETTY_PRINT_RESULTS = "pretty.print.results";
+
+    /** Amazon provider name */
+    String AMAZON_PROVIDER_NAME = "amazon";
+
+    /** Subutai provider name */
+    String SUBUTAI_PROVIDER_NAME = "subutai";
+
 }

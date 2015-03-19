@@ -20,13 +20,14 @@ package org.apache.usergrid.chop.api.store.subutai;
 
 
 import org.apache.usergrid.chop.api.SshValues;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.stack.Instance;
 
 import com.google.common.base.Preconditions;
 
 
 /**
- * A simple values holder for Amazon Instance based associations.
+ * A simple values holder for Subutai Instance based associations.
  */
 public class SubutaiInstanceValues implements SshValues {
 
@@ -66,7 +67,7 @@ public class SubutaiInstanceValues implements SshValues {
     @Override
     public String getProviderName()
     {
-        return SubutaiProvider.PROVIDER_NAME;
+        return Providers.SUBUTAI.getProviderName();
     }
 }
 

@@ -16,20 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.usergrid.chop.api.store.subutai;
+package org.apache.usergrid.chop.spi;
 
 
-import org.apache.usergrid.chop.spi.Provider;
-import org.apache.usergrid.chop.spi.Providers;
+import org.apache.usergrid.chop.api.Constants;
 
 
-public class SubutaiProvider implements Provider
-{
-    public static final String PROVIDER_NAME = Providers.SUBUTAI.getProviderName();
+public enum Providers {
+    SUBUTAI( Constants.SUBUTAI_PROVIDER_NAME ),
+    AMAZON( Constants.AMAZON_PROVIDER_NAME );
 
-    @Override
-    public String getName()
-    {
-        return PROVIDER_NAME;
+    String providerName;
+
+    Providers( String providerName ) {
+        this.providerName = providerName;
+    }
+
+    public String getProviderName() {
+        return providerName;
     }
 }

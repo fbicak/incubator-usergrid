@@ -24,7 +24,7 @@ import org.safehaus.guicyfig.FigSingleton;
 import org.safehaus.guicyfig.GuicyFig;
 import org.safehaus.guicyfig.Key;
 
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
+import org.apache.usergrid.chop.api.Constants;
 
 
 /**
@@ -104,7 +104,7 @@ public interface ChopUiFig extends GuicyFig {
 
 
     String SERVICE_PROVIDER_KEY = "service.provider";
-    String DEFAULT_SERVICE_PROVIDER = AmazonProvider.PROVIDER_NAME;
+    String DEFAULT_SERVICE_PROVIDER = Constants.AMAZON_PROVIDER_NAME;
 
     /**
      *

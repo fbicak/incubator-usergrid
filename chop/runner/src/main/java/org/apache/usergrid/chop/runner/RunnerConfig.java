@@ -31,9 +31,7 @@ import javax.servlet.ServletContextEvent;
 
 import org.apache.usergrid.chop.api.Project;
 import org.apache.usergrid.chop.api.Runner;
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
-import org.apache.usergrid.chop.api.store.amazon.Ec2Metadata;
-import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.spi.RunnerRegistry;
 import org.safehaus.guicyfig.Env;
 import org.safehaus.jettyjam.utils.TestMode;
@@ -56,7 +54,7 @@ public class RunnerConfig extends GuiceServletContextListener {
     private Project project;
     private Runner runner;
     private ServletFig servletFig;
-    private String providerName = AmazonProvider.PROVIDER_NAME;
+    private String providerName = Providers.AMAZON.getProviderName();
     private boolean registered = false;
 
 
@@ -94,11 +92,11 @@ public class RunnerConfig extends GuiceServletContextListener {
             CommandLine cl = RunnerAppJettyRunner.getCommandLine();
             if ( cl.hasOption( 'p' ) ) {
                 String serviceProvider = cl.getOptionValue( 'p' );
-                if ( serviceProvider.toLowerCase().equals( SubutaiProvider.PROVIDER_NAME ) ) {
-                    providerName = SubutaiProvider.PROVIDER_NAME;
+                if ( serviceProvider.toLowerCase().equals( Providers.SUBUTAI.getProviderName() ) ) {
+                    providerName = Providers.SUBUTAI.getProviderName();
                 }
                 else {
-                    providerName = AmazonProvider.PROVIDER_NAME;
+                    providerName = Providers.AMAZON.getProviderName();
                 }
                 LOG.info("The -p option has been provided: runner will use " + providerName + " as a service provider.");
             }
@@ -148,9 +146,6 @@ public class RunnerConfig extends GuiceServletContextListener {
         if ( env == Env.UNIT || env == Env.INTEG || env == Env.ALL ) {
             runner.bypass( Runner.HOSTNAME_KEY, "localhost" );
             runner.bypass( Runner.IPV4_KEY, "127.0.0.1" );
-        }
-        else if ( env == Env.CHOP ) {
-            Ec2Metadata.applyBypass( runner );
         }
 
         StringBuilder sb = new StringBuilder();
@@ -251,7 +246,7 @@ public class RunnerConfig extends GuiceServletContextListener {
         }
         runner.bypass( Runner.SERVER_PORT_KEY, "" + jettyRunner.getPort() );
 
-        if ( providerName.equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
+        if ( providerName.equalsIgnoreCase( Providers.SUBUTAI.getProviderName() ) ) {
 //            TODO change runner URL if the container is reachable via its hostname
             runner.bypass( Runner.URL_KEY, "https://" + runner.getIpv4Address()
                     + ":" + runner.getServerPort() );

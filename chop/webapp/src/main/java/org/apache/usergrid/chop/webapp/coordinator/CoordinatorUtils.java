@@ -31,9 +31,8 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.usergrid.chop.api.store.amazon.AmazonProvider;
 import org.apache.usergrid.chop.api.store.subutai.SubutaiInstanceValues;
-import org.apache.usergrid.chop.api.store.subutai.SubutaiProvider;
+import org.apache.usergrid.chop.spi.Providers;
 import org.apache.usergrid.chop.stack.Cluster;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -236,7 +235,7 @@ public class CoordinatorUtils {
         chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
 
         String username;
-        if ( chopUiFig.getServiceProvider().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+        if ( chopUiFig.getServiceProvider().equals( Providers.SUBUTAI.getProviderName() ) ) {
             for( Instance instance: cluster.getInstances() ) {
                 sshValues.add( new SubutaiInstanceValues( instance, keyFile ) );
             }
@@ -371,7 +370,7 @@ public class CoordinatorUtils {
         chopUiFig = InjectorFactory.getInstance( ChopUiFig.class );
         String username;
 
-        if ( chopUiFig.getServiceProvider().equals( SubutaiProvider.PROVIDER_NAME ) ) {
+        if ( chopUiFig.getServiceProvider().equals( Providers.SUBUTAI.getProviderName() ) ) {
             for( Instance instance: stack.getRunnerInstances() ) {
                 sshValues.add( new SubutaiInstanceValues( instance, keyFile ) );
             }
@@ -464,8 +463,8 @@ public class CoordinatorUtils {
         sb = new StringBuilder();
         sb.append( "sudo su -c \"nohup /usr/bin/java -Darchaius.deployment.environment=CHOP -jar " )
           .append( destFile );
-        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( SubutaiProvider.PROVIDER_NAME ) ) {
-            sb.append( " -p " + SubutaiProvider.PROVIDER_NAME );
+        if ( chopUiFig.getServiceProvider().equalsIgnoreCase( Providers.SUBUTAI.getProviderName() ) ) {
+            sb.append( " -p " + Providers.SUBUTAI.getProviderName() );
             LOG.info( "Configuring runners according to " + chopUiFig.getServiceProvider() + " provider..." );
         }
         sb.append( " > /var/log/chop-runner.log 2>&1 &\"" );
