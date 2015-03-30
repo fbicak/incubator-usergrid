@@ -104,6 +104,7 @@
     <default.ami.id>ami-c56152ac</default.ami.id>
     <jettyjam.version>2.1.5</jettyjam.version>
     <jsch.version>0.1.50</jsch.version>
+    <subutai-hadoop-plugin.version>2.0.4</subutai-hadoop-plugin.version>
 
     <!-- Use Vaadin 7.0.x. See for details: CHOP-72 - Vaadin 7.1.x problem - UI doesn't show. -->
     <vaadin.version>7.0.7</vaadin.version>
@@ -482,6 +483,66 @@
           <exclusion>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-rt-frontend-jaxrs</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+
+      <dependency>
+        <groupId>org.safehaus.subutai</groupId>
+        <artifactId>hadoop-plugin-rest</artifactId>
+        <version>${subutai-hadoop-plugin.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.safehaus.subutai</groupId>
+            <artifactId>subutai-common</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.safehaus.subutai</groupId>
+            <artifactId>template-registry-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.safehaus.subutai</groupId>
+            <artifactId>peer-manager-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.safehaus.subutai</groupId>
+            <artifactId>network-manager-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.safehaus.subutai</groupId>
+            <artifactId>hadoop-plugin-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.safehaus.subutai</groupId>
+            <artifactId>tracker-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.junit</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.apache.cxf</groupId>
