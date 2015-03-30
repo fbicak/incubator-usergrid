@@ -38,7 +38,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 
@@ -144,7 +143,7 @@ public class SubutaiInstanceManager implements InstanceManager
     public LaunchResult launchCluster( final ICoordinatedStack stack, final ICoordinatedCluster cluster,
                                        final int timeout, final String publicKeyFilePath )
     {
-        LOG.info( "Creating the cluster instances on {}", stack.getDataCenter() );
+        LOG.info( "Creating the {} cluster instances on {}", cluster.getName(), stack.getDataCenter() );
 
         List<String> instanceIds = new ArrayList<String>( cluster.getSize() );
         Collection<Instance> instances = new ArrayList<Instance>();
@@ -158,22 +157,15 @@ public class SubutaiInstanceManager implements InstanceManager
             LOG.error( "Public key {} does not exists!", publicKeyFilePath );
             return new SubutaiLaunchResult( cluster.getInstanceSpec(), Collections.EMPTY_LIST );
         }
-        EnvironmentJson environment = subutaiClient.createStackEnvironment( stack, publicKeyFile );
+        Collection<Instance> clusterInstances = subutaiClient.createClusterInstances( stack, cluster, publicKeyFile );
 
-        if ( environment == null ) {
+
+        if ( clusterInstances == null || clusterInstances.isEmpty() ) {
             LOG.error( "Could not create environment for {} stack!", stack.getName() );
             return new SubutaiLaunchResult( cluster.getInstanceSpec(), Collections.EMPTY_LIST );
         }
 
-        Set<ContainerJson> containerHosts = environment.getContainers();
-
-        Iterator<ContainerJson> iterator = containerHosts.iterator();
-
-        while( iterator.hasNext() ) {
-            ContainerJson containerHost = iterator.next();
-            Instance instance = SubutaiUtils.getInstanceFromContainer( containerHost );
-            instances.add( instance );
-        }
+        instances.addAll( clusterInstances );
 
         if ( timeout > SLEEP_LENGTH ) {
             LOG.info( "Waiting for maximum {} msec until all instances are running", timeout );
@@ -194,7 +186,9 @@ public class SubutaiInstanceManager implements InstanceManager
             if ( ! isConfigurationSuccessful ) {
                 LOG.error( "Configuration of {} cluster failed with {} plugin! Destroying environment...",
                         cluster.getName(), cluster.getConfiguratorPlugin() );
-                subutaiClient.destroyEnvironment( environment.getId() );
+                UUID environmentId = subutaiClient
+                        .getEnvironmentIdByInstanceId( UUID.fromString( instances.iterator().next().getId() ) );
+                subutaiClient.destroyEnvironment( environmentId );
                 return new SubutaiLaunchResult( cluster.getInstanceSpec(), Collections.EMPTY_LIST );
             }
         }
