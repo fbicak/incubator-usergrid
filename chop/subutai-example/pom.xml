@@ -43,6 +43,11 @@
     </dependency>
 
     <dependency>
+      <groupId>com.google.inject.extensions</groupId>
+      <artifactId>guice-servlet</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.fluttercode.datafactory</groupId>
       <artifactId>datafactory</artifactId>
       <version>${datafactory.version}</version>
