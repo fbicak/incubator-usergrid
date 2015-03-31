@@ -399,11 +399,11 @@ public class CoordinatorUtils {
         String destFile = sb.toString();
         commands.add( new SCPCommand( runnerJar.getAbsolutePath(), destFile ) );
 
-        sb = new StringBuilder();
 
         /** Get runner scripts out of the jar file and prepare ssh & scp commands */
         for ( Cluster cluster : stack.getClusters() ){
 
+            sb = new StringBuilder();
             // Prepare setup environment variables
             for( Object obj: cluster.getInstanceSpec().getScriptEnvironment().keySet() ) {
 
