@@ -16,7 +16,8 @@
               }
           },
           "size" : 2
-      },
+      }
+      ,
       {
           "name" : "TestHadoopCluster",
           "configuratorPlugin" : "hadoop",
@@ -25,12 +26,12 @@
               "type" : "m1.large",
               "keyName" : "TestKeyPair",
               "setupScripts" : [ "file://./test_script.sh" ],
-              "runnerScripts" : [ "file://./runner.sh" ],
+              "runnerScripts" : [ "file://./runner-hadoop.sh" ],
               "scriptEnvironment" : {
                   "TEST_PARAM" : "Test Param Value"
               }
           },
-          "size" : 2
+          "size" : 1
       }
   ],
   "dataCenter" : "172.16.11.188:8542",
