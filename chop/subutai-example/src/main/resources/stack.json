@@ -31,7 +31,7 @@
                   "TEST_PARAM" : "Test Param Value"
               }
           },
-          "size" : 1
+          "size" : 4
       }
   ],
   "dataCenter" : "172.16.11.188:8542",

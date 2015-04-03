@@ -18,6 +18,4 @@
 #
 
 echo "Test script started running..."
-#apt-get update
-#apt-get install --assume-yes --force-yes subutai-hadoop
 echo -e "Test script is run successfully, $TEST_PARAM" > /home/subutai/runnerOut.log

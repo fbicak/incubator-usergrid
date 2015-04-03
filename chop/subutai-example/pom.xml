@@ -17,6 +17,7 @@
   <properties>
     <datastax.version>2.0.1</datastax.version>
     <datafactory.version>0.8</datafactory.version>
+    <hadoop.version>1.2.1</hadoop.version>
   </properties>
 
   <dependencies>
@@ -52,6 +53,22 @@
       <groupId>com.datastax.cassandra</groupId>
       <artifactId>cassandra-driver-core</artifactId>
       <version>${datastax.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+      <version>${hadoop.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.sun.jersey</groupId>
+          <artifactId>jersey-json</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-mapper-asl</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
