@@ -37,7 +37,7 @@ import com.google.common.base.Preconditions;
 
 
 @FixMethodOrder( MethodSorters.NAME_ASCENDING)
-@IterationChop( iterations = 2, threads = 4 )
+@IterationChop( iterations = 2, threads = 1 )
 public class HadoopClusterTest {
     private static final Logger LOG = LoggerFactory.getLogger( HadoopClusterTest.class );
     private static final String DEFAULT_HADOOP_USERNAME = "root";
@@ -54,7 +54,7 @@ public class HadoopClusterTest {
     public static ICoordinatedCluster testHadoopCluster;
 
     public static HadoopClient client;
-    private static final int rowCount = 500000;
+    private static final int rowCount = 100000;
 
 
     @BeforeClass
