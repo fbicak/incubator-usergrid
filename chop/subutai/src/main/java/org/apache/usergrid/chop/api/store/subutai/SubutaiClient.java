@@ -26,6 +26,8 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.representation.Form;
+import com.sun.jersey.api.uri.UriComponent;
+
 import org.apache.usergrid.chop.api.RestParams;
 import org.apache.usergrid.chop.stack.Cluster;
 import org.apache.usergrid.chop.stack.ICoordinatedCluster;
@@ -38,6 +40,7 @@ import org.safehaus.subutai.common.host.ContainerHostState;
 import org.safehaus.subutai.core.env.rest.ContainerJson;
 import org.safehaus.subutai.core.env.rest.EnvironmentJson;
 import org.safehaus.subutai.core.env.rest.TopologyJson;
+import org.safehaus.subutai.plugin.hadoop.rest.TrimmedHadoopConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,9 +52,11 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -70,7 +75,9 @@ public class SubutaiClient
     public static final String PEER_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/peer";
     public static final String CONTAINER_BASE_ENDPOINT = ENVIRONMENT_BASE_ENDPOINT + "/container";
     public static final String CASSANDRA_PLUGIN_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/cassandra";
+    public static final String HADOOP_PLUGIN_BASE_ENDPOINT = REST_BASE_ENDPOINT + "/hadoop";
     public static final String CASSANDRA_PLUGIN_CONFIGURE_ENDPOINT = CASSANDRA_PLUGIN_BASE_ENDPOINT + "/configure_environment";
+    public static final String HADOOP_PLUGIN_CONFIGURE_ENDPOINT = HADOOP_PLUGIN_BASE_ENDPOINT + "/configure_environment";
     private Gson gson;
 
 
@@ -86,9 +93,12 @@ public class SubutaiClient
     /**
      *
      * @param stack used to create an environment on Subutai
+     * @param cluster
      * @return the environment created for the given stack
      */
-    public EnvironmentJson createStackEnvironment( final ICoordinatedStack stack, File publicKeyFile ) {
+    public Set<Instance> createClusterInstances( final ICoordinatedStack stack, final Cluster cluster,
+                                                 File publicKeyFile ) {
+        Set<Instance> clusterInstances = new HashSet<Instance>();
 
         String publicKeyFileContent;
         if( publicKeyFile == null  ) {
@@ -112,50 +122,99 @@ public class SubutaiClient
         // Create the topology from the supplied stack
         TopologyJson topology;
         try {
-            topology = getTopologyFromStack( stack );
+            topology = getTopologyFromCluster( cluster );
         }
         catch ( SubutaiException e ) {
             LOG.error( e.getMessage() );
             return null;
         }
 
-        // Send a request to build the topology
-        WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
+        // Check if the environment should be created from scratch or should be grown
+        ICoordinatedCluster firstCluster = ( ICoordinatedCluster ) stack.getClusters().get( 0 );
+        boolean isEnvironmentCreated = ! firstCluster.getInstances().isEmpty();
 
-        // Returns the uuid of the environment created from the supplied topology
-        Form environmentCreateForm = new Form();
-        environmentCreateForm.add( RestParams.ENVIRONMENT_NAME, gson.toJson( stack.getName() ) );
-        // TODO get free subnets via a rest call when it is implemented on Subutai
-        environmentCreateForm.add( RestParams.ENVIRONMENT_SUBNET, "192.168.179.1/24" );
-        environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
-        environmentCreateForm.add( RestParams.SSH_KEY, publicKeyFileContent );
+        if ( ! isEnvironmentCreated ) {
+            // Send a request to build the topology
+            WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
 
-        ClientResponse environmentBuildResponse = resource.queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+            // Returns the uuid of the environment created from the supplied topology
+            Form environmentCreateForm = new Form();
+            environmentCreateForm.add( RestParams.ENVIRONMENT_NAME, gson.toJson( stack.getName() ) );
+            // TODO get free subnets via a rest call when it is implemented on Subutai
+            environmentCreateForm.add( RestParams.ENVIRONMENT_SUBNET, "192.168.179.1/24" );
+            environmentCreateForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
+            environmentCreateForm.add( RestParams.SSH_KEY, publicKeyFileContent );
+
+            ClientResponse environmentBuildResponse = resource.queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                                              .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
+                                                              .accept( MediaType.APPLICATION_JSON )
+                                                              .post( ClientResponse.class, environmentCreateForm );
+
+            if ( environmentBuildResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
+                LOG.error( "Instance creation operation for {} cluster is not successful! Error: {}", cluster.getName(),
+                        environmentBuildResponse.getEntity( String.class ) );
+                return null;
+            }
+            LOG.info( "Instances for {} is created successfully", cluster.getName() );
+
+            String responseMessage = environmentBuildResponse.getEntity( String.class );
+            EnvironmentJson environment = gson.fromJson( responseMessage, EnvironmentJson.class );
+            for ( ContainerJson containerJson : environment.getContainers() ) {
+                Instance instance = SubutaiUtils.getInstanceFromContainer( containerJson );
+                clusterInstances.add( instance );
+            }
+        }
+        else {
+            // Get the environmentId by one of the containers from one of the clusters
+            UUID environmentId = getEnvironmentIdByInstanceId(
+                    UUID.fromString( firstCluster.getInstances().iterator().next().getId() ) );
+            if ( environmentId == null ) {
+                LOG.error( "Could not find environment of {} cluster", cluster.getName() );
+                return null;
+            }
+
+            // Send a request to add the nodegroup the specified environment
+            WebResource resource = client.resource( "http://" + httpAddress ).path( ENVIRONMENT_BASE_ENDPOINT );
+            // Returns the uuid of the environment created from the supplied blueprint
+
+            Form addContainerToExistingEnvironmentForm = new Form();
+            addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_ID, environmentId.toString() );
+            addContainerToExistingEnvironmentForm.add( RestParams.ENVIRONMENT_TOPOLOGY, gson.toJson( topology ) );
+            addContainerToExistingEnvironmentForm.add( RestParams.SSH_KEY, null );
+
+            ClientResponse addNodeGroupResponse = resource.path( "/grow" )
+                                                          .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
                                                           .type( MediaType.APPLICATION_FORM_URLENCODED_TYPE )
                                                           .accept( MediaType.APPLICATION_JSON )
-                                                          .post( ClientResponse.class, environmentCreateForm );
+                                                          .post( ClientResponse.class, addContainerToExistingEnvironmentForm );
 
-        if ( environmentBuildResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
-            LOG.error( "Environment build operation for {} stack is not successful! Error: {}", stack.getName(),
-                    environmentBuildResponse.getEntity( String.class ) );
-            return null;
+            String responseMessage = addNodeGroupResponse.getEntity( String.class );
+            LOG.debug( "Response of add node group rest call: {}", responseMessage );
+
+            if( addNodeGroupResponse.getStatus() != Response.Status.OK.getStatusCode() ) {
+                LOG.error( "Could not create cluster instances on {} environment, Error: {}",
+                        getEnvironmentByEnvironmentId( environmentId ).getName(), responseMessage );
+                return clusterInstances;
+            }
+            Type listType = new TypeToken<Set<ContainerJson>>() {}.getType();
+
+            Set<ContainerJson> clusterContainers = gson.fromJson( responseMessage, listType );
+
+            LOG.info( "Cluster instances are created for {} successfully", cluster.getName() );
+            for ( ContainerJson containerJson : clusterContainers ) {
+                clusterInstances.add( SubutaiUtils.getInstanceFromContainer( containerJson ) );
+            }
         }
-        LOG.info( "Environment for {} is created successfully", stack.getName() );
-
-        String responseMessage = environmentBuildResponse.getEntity( String.class );
-        EnvironmentJson environment = gson.fromJson( responseMessage, EnvironmentJson.class );
-        return environment;
+        return clusterInstances;
     }
 
 
-    public TopologyJson getTopologyFromStack( final ICoordinatedStack stack ) throws SubutaiException {
+    public TopologyJson getTopologyFromCluster( final Cluster cluster ) throws SubutaiException {
         TopologyJson topology = new TopologyJson();
-        Set<NodeGroup> clusterNodeGroups = new HashSet<NodeGroup>( stack.getClusters().size() );
+        Set<NodeGroup> clusterNodeGroups = new HashSet<NodeGroup>( 1 );
 
-        for ( Cluster cluster : stack.getClusters() ) {
-            NodeGroup clusterNodeGroup = SubutaiUtils.getClusterNodeGroup( cluster );
-            clusterNodeGroups.add( clusterNodeGroup );
-        }
+        NodeGroup clusterNodeGroup = SubutaiUtils.getClusterNodeGroup( cluster );
+        clusterNodeGroups.add( clusterNodeGroup );
         Map<UUID, Set<NodeGroup>> nodeGroupPlacement = new HashMap<UUID, Set<NodeGroup>>();
         UUID localPeerId = getLocalPeerId();
         nodeGroupPlacement.put( localPeerId, clusterNodeGroups );
@@ -547,9 +606,111 @@ public class SubutaiClient
     }
 
 
-    public boolean configureHadoopCluster( final Cluster cluster, final Collection<Instance> instances ) {
-        // TODO implement this functionality
-        return true;
+    public boolean configureHadoopCluster( final Cluster cluster, final Collection<Instance> clusterInstances ) {
+        List<String> clusterInstanceIds = new ArrayList<String>( clusterInstances.size() );
+        for ( Instance clusterInstance : clusterInstances ) {
+            clusterInstanceIds.add( clusterInstance.getId() );
+        }
+
+        UUID environmentId = getEnvironmentIdByInstanceId( UUID.fromString( clusterInstances.iterator().next().getId() ) );
+
+        TrimmedHadoopConfig hadoopClusterConfig = new TrimmedHadoopConfig();
+        int nameNodeIndex = 0;
+        int jobTrackerIndex = clusterInstanceIds.size() > 1 ? 1 : 0;
+        int secondaryNameNodeIndex = clusterInstanceIds.size() > 1 ? 1 : 0;
+        int slaveNodeStartIndex = clusterInstanceIds.size() > 2 ? 2 : 0;
+
+        hadoopClusterConfig.setNameNode( clusterInstanceIds.get( nameNodeIndex ) );
+        hadoopClusterConfig.setJobTracker( clusterInstanceIds.get( jobTrackerIndex ) );
+        hadoopClusterConfig.setSecNameNode( clusterInstanceIds.get( secondaryNameNodeIndex ) );
+        Set<String> slaveNodeIds = new HashSet<String>( clusterInstanceIds.size() - slaveNodeStartIndex );
+        for ( int i = slaveNodeStartIndex; i < clusterInstanceIds.size(); i++ ) {
+            slaveNodeIds.add( clusterInstanceIds.get( i ) );
+        }
+        hadoopClusterConfig.setEnvironmentId( environmentId.toString() );
+        hadoopClusterConfig.setSlaves( slaveNodeIds );
+        hadoopClusterConfig.setClusterName( cluster.getName() );
+
+        // Configure cluster
+        WebResource resource = client.resource( "http://" + httpAddress ).path( HADOOP_PLUGIN_CONFIGURE_ENDPOINT );
+        ClientResponse configureHadoopResponse = null;
+        // Returns the uuid of the environment created from the supplied blueprint
+        try {
+            String encodedHadoopClusterConfig = UriComponent.encode( gson.toJson( hadoopClusterConfig ), UriComponent.Type.QUERY_PARAM );
+            configureHadoopResponse = resource
+                    .queryParam( RestParams.SUBUTAI_CONFIG_PARAM_NAME, encodedHadoopClusterConfig )
+                    .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                    .type( MediaType.APPLICATION_JSON )
+                    .post( ClientResponse.class );
+        } catch ( Exception e ) {
+            LOG.error( "An error occurred while configuring the hadoop cluster! Error: {}", e );
+            return false;
+        }
+
+
+        boolean success = configureHadoopResponse.getStatus() == Response.Status.OK.getStatusCode() ? true : false;
+        if ( success ) {
+            LOG.info( "Instances of {} cluster is configured successfully", cluster.getName() );
+        }
+        else {
+            LOG.error( "Configuration of {} cluster failed! Error: {}", cluster.getName(),
+                    configureHadoopResponse.getEntity( String.class ) );
+            return success;
+        }
+
+
+        ClientResponse startNameNodeResponse;
+        // Start cluster
+        resource = client.resource( "http://" + httpAddress ).path( HADOOP_PLUGIN_BASE_ENDPOINT );
+        try {
+            startNameNodeResponse = resource.path( "/clusters" )
+                                            .path( "/" + cluster.getName() )
+                                            .path( "/start" )
+                                            .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                            .put( ClientResponse.class );
+        } catch ( Exception e ) {
+            LOG.error( "An error occurred while starting the Namenode! Error: {}", e );
+            return false;
+        }
+
+        success = startNameNodeResponse.getStatus() == Response.Status.OK.getStatusCode() ? true : false;
+
+        if ( success ) {
+            LOG.info( "Started {} cluster Namenode processes successfully", cluster.getName() );
+        }
+        else {
+            LOG.error( "Could not start the NameNode processes of {} cluster failed! Error: {}", cluster.getName(),
+                    startNameNodeResponse.getEntity( String.class ) );
+            return success;
+        }
+
+
+        ClientResponse startJobTrackerResponse;
+        // Start cluster
+        resource = client.resource( "http://" + httpAddress ).path( HADOOP_PLUGIN_BASE_ENDPOINT );
+        try {
+            startJobTrackerResponse = resource.path( "/clusters" )
+                                            .path( "/job" )
+                                            .path( "/" + cluster.getName() )
+                                            .path( "/start" )
+                                            .queryParam( RestParams.SUBUTAI_AUTH_TOKEN_NAME, authToken )
+                                            .put( ClientResponse.class );
+        }  catch ( Exception e ) {
+            LOG.error( "An error occurred while starting the JobTracker! Error: {}", e );
+            return false;
+        }
+
+        success = startJobTrackerResponse.getStatus() == Response.Status.OK.getStatusCode() ? true : false;
+
+        if ( success ) {
+            LOG.info( "Started {} cluster JobTracker processes successfully", cluster.getName() );
+        }
+        else {
+            LOG.error( "Could not start the JobTracker processes of {} cluster failed! Error: {}", cluster.getName(),
+                    startNameNodeResponse.getEntity( String.class ) );
+            return success;
+        }
+        return success;
     }
 
 

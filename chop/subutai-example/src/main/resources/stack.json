@@ -1,22 +1,40 @@
 {
   "name" : "ExampleStack",
   "id" : "adb51dfa-ed4f-4a36-9cbf-6b5a7b6da31e",
-  "clusters" : [ {
-    "name" : "TestCassandraCluster",
-    "configuratorPlugin" : "cassandra",
-    "instanceSpec" : {
-      "imageId" : "cassandra",
-      "type" : "m1.large",
-      "keyName" : "TestKeyPair",
-      "setupScripts" : [ "file://./test_script.sh" ],
-      "runnerScripts" : [ "file://./runner.sh" ],
-      "scriptEnvironment" : {
-          "TEST_PARAM" : "Test Param Value"
+  "clusters" : [
+      {
+          "name" : "TestCassandraCluster",
+          "configuratorPlugin" : "cassandra",
+          "instanceSpec" : {
+              "imageId" : "cassandra",
+              "type" : "m1.large",
+              "keyName" : "TestKeyPair",
+              "setupScripts" : [ "file://./test_script.sh" ],
+              "runnerScripts" : [ "file://./runner.sh" ],
+              "scriptEnvironment" : {
+                  "TEST_PARAM" : "Test Param Value"
+              }
+          },
+          "size" : 2
       }
-    },
-    "size" : 2
-  } ],
-  "dataCenter" : "172.16.9.11:8542",
+      ,
+      {
+          "name" : "TestHadoopCluster",
+          "configuratorPlugin" : "hadoop",
+          "instanceSpec" : {
+              "imageId" : "hadoop",
+              "type" : "m1.large",
+              "keyName" : "TestKeyPair",
+              "setupScripts" : [ "file://./test_script.sh" ],
+              "runnerScripts" : [ "file://./runner-hadoop.sh" ],
+              "scriptEnvironment" : {
+                  "TEST_PARAM" : "Test Param Value"
+              }
+          },
+          "size" : 4
+      }
+  ],
+  "dataCenter" : "172.16.11.188:8542",
   "ipRuleSet" : {
     "name" : "ChopTestSecurityGroup",
     "id" : "40a543f3-9cfc-44bc-b896-77574cae1772",

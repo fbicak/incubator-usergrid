@@ -49,5 +49,6 @@ public interface RestParams {
     String ENVIRONMENT_ID = "environmentId";
     String INSTANCE_ID = "containerId";
     String SUBUTAI_AUTH_TOKEN_NAME = "sptoken";
+    String SUBUTAI_CONFIG_PARAM_NAME = "config";
     String SSH_KEY = "key";
 }

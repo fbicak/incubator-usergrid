@@ -239,7 +239,14 @@ public class TestSubutaiClient
 
     @Test
     public void test001_createStackEnvironment() {
-        environmentJson = subutaiClient.createStackEnvironment( stack, publicKeyFile );
+        ICoordinatedCluster cluster = stack.getClusters().get( 0 );
+        Set<Instance> clusterInstances =
+                subutaiClient.createClusterInstances( stack, cluster, publicKeyFile );
+        assertNotNull( clusterInstances );
+        assertEquals( clusterInstances.size(), cluster.getSize() );
+        UUID environmentId = subutaiClient.getEnvironmentIdByInstanceId(
+                UUID.fromString( clusterInstances.iterator().next().getId() ) );
+        environmentJson = subutaiClient.getEnvironmentByEnvironmentId( environmentId );
         assertNotNull( environmentJson );
         for ( ContainerJson containerJson : environmentJson.getContainers() ) {
             stack.getClusters().get( 0 ).add( SubutaiUtils.getInstanceFromContainer( containerJson ) );
@@ -356,8 +363,9 @@ public class TestSubutaiClient
 
     @Test
     public void test013_createStackEnvironmentWithoutPublicKey() {
-        environmentJson = subutaiClient.createStackEnvironment( stack, null );
-        assertNull( environmentJson );
+        Set<Instance> clusterInstances =
+                subutaiClient.createClusterInstances( stack, stack.getClusters().get( 0 ), null );
+        assertNull( clusterInstances );
     }
 
 
